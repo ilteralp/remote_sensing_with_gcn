@@ -29,9 +29,8 @@ class GraphInputDataset(InMemoryDataset):
     # A list of files in the processed_dir which needs to be found in order to skip the processing.
     @property
     def processed_file_names(self):
-        return ['data.pt']
-        #return ['/home/rog/code/geometric/data/fixed_length.dataset']
-        #return ['/home/rog/code/geometric/data/training.pt', '/home/rog/code/geometric/data/test.pt']
+        #return ['data.pt']
+        return ['train.pt', 'test.pt']
     
     def download(self):
         pass
