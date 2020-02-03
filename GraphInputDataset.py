@@ -14,9 +14,9 @@ import pandas as pd
 """
 See https://pytorch-geometric.readthedocs.io/en/latest/_modules/torch_geometric/datasets/geometry.html
 """
-class FixedLengthDataset(InMemoryDataset):
+class GraphInputDataset(InMemoryDataset):
     def __init__(self, root, train=True, transform=None, pre_transform=None):
-        super(FixedLengthDataset, self).__init__(root, transform, pre_transform)
+        super(GraphInputDataset, self).__init__(root, transform, pre_transform)
         path = self.processed_paths[0] if train else self.processed_paths[1]
         self.data, self.slices = torch.load(path)
         
@@ -58,8 +58,8 @@ info_path = ROOT_PATH +"info.txt"
 df_tr = pd.read_csv(X_train_feat_path, header=None)
 df_test = pd.read_csv(X_test_feat_path, header=None)
 
-train_dataset = FixedLengthDataset(X_train_feat_path(), train=True)
-test_dataset = FixedLengthDataset(X_test_feat_path(), train=False)
+train_dataset = GraphInputDataset(X_train_feat_path(), train=True)
+test_dataset = GraphInputDataset(X_test_feat_path(), train=False)
 
 
 
