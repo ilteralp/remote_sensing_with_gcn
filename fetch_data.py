@@ -25,7 +25,7 @@ def read_dataset():
         node_data = json.load(node_file)
         # Check total samples
         
-        
+        """
         # X
         for sample in node_data:
             node_feat = np.asarray(sample['features'])
@@ -33,10 +33,10 @@ def read_dataset():
             print(type(node_feat))
         """
         # y
-        y = torch.from_numpy(np.asarray([sample['label'] for sample in node_data]))
+        #y = torch.from_numpy(np.asarray([sample['label'] for sample in node_data]))
+        y = torch.IntTensor([sample['label'] for sample in node_data])
         print(y)
-        print(type(y))
-        """
+        print(y.type(), type(y[0]), y.data.tolist())
         """
         # Node ids
         # Read data and turn it into torch tensor
