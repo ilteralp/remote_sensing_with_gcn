@@ -17,7 +17,7 @@ NUM_CLASSES = 15
 NUM_TRAIN_SAMPLES = 2832
 NUM_TEST_SAMPLES = 12197
 #TOTAL_SAMPLES = NUM_TRAIN_SAMPLES + NUM_TEST_SAMPLES
-TOTAL_SAMPLES = 4
+TOTAL_SAMPLES = 6
 
 """
 Reads given dataset file containing both train and test samples
@@ -31,20 +31,52 @@ def read_dataset():
             print("Samples length:", len(node_data), "vs", TOTAL_SAMPLES)
             return False
         else:
-            """ ====================== x ====================== """
-            x = torch.FloatTensor([sample['features'] for sample in node_data])
-             
-            """ ====================== y ====================== """
-            y = torch.IntTensor([sample['label'] for sample in node_data])
-            
-            """
-            # Node ids
-            # Read data and turn it into torch tensor
-            X = torch.from_numpy(np.asarray([sample['nodeId'] for sample in node_data]))
-            print(X)
-            print(type(X))
-            """
-            return True, x, y
+            with open(EDGES_FILE_PATH) as edge_file:
+                edge_data = json.load(edge_file)
+                # Check number of classes
+                if len(edge_data) != NUM_CLASSES:
+                    print("Classes length", len(edge_data))
+                    return False
+                else:
+                    data_list = []
+                    # Fetch each sample seperately
+                    for sample in node_data:
+                        node_id = sample['nodeId']
+                        features = sample['features']
+                        label = sample['label']
+                        raw_edges = edge_data[label-1][str(label)] # includes that node_id, need to remove it. 
+                        neighbours = [neigbour_id for neigbour_id in raw_edges if neigbour_id != node_id]
+                        #print("node_id:", node_id, "label:", label, "neighbours:", neighbours)
+                        data = Data(x=features, y=label, edge_index=neighbours)
+                        print("x:", features, "y:", label, "edge_index:", neighbours)
+                        data_list.append(data)
+                    print(len(data_list))
+                    for data in data_list:
+                        print(data)
+                    
+                    # """ ====================== x ====================== """
+                    # x = torch.FloatTensor([sample['features'] for sample in node_data])
+                     
+                    # """ ====================== y ====================== """
+                    # y = torch.IntTensor([sample['label'] for sample in node_data])
+                    
+                    # """ ====================== edge_index ====================== """
+                    # edges = []
+                    # edges.append([])
+                    # edges.append([])
+                    # for i, sample_class in enumerate(edge_data):
+                    #     class_edges = sample_class[str(i+1)]
+                    #     if len(class_edges) > 0:
+                    #         for edge in class_edges:
+                            
+                    # """
+                    # # Node ids
+                    # # Read data and turn it into torch tensor
+                    # X = torch.from_numpy(np.asarray([sample['nodeId'] for sample in node_data]))
+                    # print(X)
+                    # print(type(X))
+                    # """
+                    # return True, x, y
         
     
 """
@@ -74,6 +106,7 @@ def read_edges():
    
 # Read dataset
 ret_val = read_dataset()
+"""
 if ret_val[0] is True:
     _, x, y = ret_val
     # Read edges
@@ -81,10 +114,11 @@ if ret_val[0] is True:
     if edge_ret_val[0] is True:
         edge_index = edge_ret_val[1]
         # print(x)
-        # print(y)
-        # print(edge_index)
+        print(y)
+        print(edge_index)
         data = Data(x=x, y=y, edge_index=edge_index)
         print("data:", data)
+"""
 
 
 
