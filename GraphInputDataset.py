@@ -19,7 +19,6 @@ class GraphInputDataset(InMemoryDataset):
         super(GraphInputDataset, self).__init__(root, transform, pre_transform)
         path = self.processed_paths[0] if train else self.processed_paths[1]
         self.data, self.slices = torch.load(path)
-        #self.data, self.slices = torch.load(self.processed_paths[0])
 
     # The name of the files to find in the self.raw_dir folder in order to skip the download.
     @property
@@ -47,12 +46,13 @@ class GraphInputDataset(InMemoryDataset):
 
         if self.pre_transform is not None:
             data_list = [self.pre_transform(data) for data in data_list]
+            
         data, slices = self.collate(data_list)
-        torch.save((data, slices), self.processed_paths[0])
+        torch.save((data, slices), self.processed_paths[0]) # Add train or test
         
 """ ======================= Read dataset ======================= """
 # Constants
-test_id = 143   # Variable length input
+test_id = 146   # Variable length input
 print("Test", test_id)
 ROOT_PATH = "/home/rog/rs/gcn/paths19/test_" + str(test_id) + "/"
 """
