@@ -48,9 +48,14 @@ def read_dataset():
                         features = torch.FloatTensor(sample['features'])
                         label = sample['label']
                         raw_edges = edge_data[label-1][str(label)] # Edges include id of node being processed, so remove it. 
-                        neighbours = torch.LongTensor([neighbour_id for neighbour_id in raw_edges if neighbour_id != node_id])
-                        data = Data(x=features, y=torch.IntTensor([label]), edge_index=neighbours)
-                        print("node_id:", node_id, "x:", features, "y:", label, "edge_index:", neighbours)
+                        #neighbours = torch.LongTensor([neighbour_id for neighbour_id in raw_edges if neighbour_id != node_id])
+                        edge_index = [[], []]
+                        for neighbour_id in raw_edges:
+                            if neighbour_id != node_id:
+                                edge_index[0].append(node_id)
+                                edge_index[1].append(neighbour_id)
+                        data = Data(x=features, y=torch.IntTensor([label]), edge_index=edge_index)
+                        print("node_id:", node_id, "x:", features, "y:", label, "edge_index:", edge_index)
                         data_list.append(data)
                     return True, data_list
                     
