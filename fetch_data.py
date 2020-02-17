@@ -45,11 +45,11 @@ def read_dataset():
                     # Fetch each sample seperately
                     for sample in node_data:
                         node_id = sample['nodeId']
-                        features = sample['features']
+                        features = torch.FloatTensor(sample['features'])
                         label = sample['label']
-                        raw_edges = edge_data[label-1][str(label)] # Edges include id of node being processed, some remove it. 
-                        neighbours = [neighbour_id for neighbour_id in raw_edges if neighbour_id != node_id]
-                        data = Data(x=features, y=label, edge_index=neighbours)
+                        raw_edges = edge_data[label-1][str(label)] # Edges include id of node being processed, so remove it. 
+                        neighbours = torch.LongTensor([neighbour_id for neighbour_id in raw_edges if neighbour_id != node_id])
+                        data = Data(x=features, y=torch.IntTensor([label]), edge_index=neighbours)
                         print("node_id:", node_id, "x:", features, "y:", label, "edge_index:", neighbours)
                         data_list.append(data)
                     return True, data_list
