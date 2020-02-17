@@ -15,8 +15,10 @@ import pandas as pd
 NUM_CLASSES = 15
 NUM_TRAIN_SAMPLES = 2832
 NUM_TEST_SAMPLES = 12197
-#TOTAL_SAMPLES = NUM_TRAIN_SAMPLES + NUM_TEST_SAMPLES
-TOTAL_SAMPLES = 15029
+TOTAL_SAMPLES = NUM_TRAIN_SAMPLES + NUM_TEST_SAMPLES
+#TOTAL_SAMPLES = 3
+
+""" ======================================== Create Dataset ======================================== """
 
 """
 See https://pytorch-geometric.readthedocs.io/en/latest/_modules/torch_geometric/datasets/geometry.html
@@ -82,24 +84,30 @@ def read_dataset():
                 edge_data = json.load(edge_file)
                 # Check number of classes
                 if len(edge_data) != NUM_CLASSES:
-                    #print("Classes length", len(edge_data))
+                    print("Classes length", len(edge_data))
                     return False, []
                 else:
                     data_list = []
                     # Fetch each sample seperately
                     for sample in node_data:
                         node_id = sample['nodeId']
-                        features = sample['features']
+                        features = torch.FloatTensor(sample['features'])
                         label = sample['label']
-                        raw_edges = edge_data[label-1][str(label)] # Edges include id of node being processed, some remove it. 
-                        neighbours = [neighbour_id for neighbour_id in raw_edges if neighbour_id != node_id]
-                        data = Data(x=features, y=label, edge_index=neighbours)
-                        #print("node_id:", node_id, "x:", features, "y:", label, "edge_index:", neighbours)
+                        raw_edges = edge_data[label-1][str(label)] # Edges include id of node being processed, so remove it. 
+                        #neighbours = torch.LongTensor([neighbour_id for neighbour_id in raw_edges if neighbour_id != node_id])
+                        e_from = []
+                        e_to = []
+                        for neighbour_id in raw_edges:
+                            if neighbour_id != node_id:
+                                e_from.append(node_id)
+                                e_to.append(neighbour_id)
+                        edge_index = torch.LongTensor([e_from, e_to])
+                        data = Data(x=features, y=torch.IntTensor([label]), edge_index=edge_index)
+                        #print("node_id:", node_id, "x:", features, "y:", label, "edge_index:", edge_index)
                         data_list.append(data)
-                    return True, data_list 
+                    return True, data_list
                 
         
-""" ======================= Read dataset ======================= """
 # Constants
 test_id = 146   # Variable length input
 print("Test", test_id)
@@ -115,7 +123,23 @@ dataset = GraphInputDataset(ROOT_PATH)
 train_dataset = dataset[:NUM_TRAIN_SAMPLES]
 test_dataset = dataset[NUM_TRAIN_SAMPLES:]
 train_dataset = train_dataset.shuffle()
-print(len(train_dataset), len(test_dataset))
+print("Train samples:", len(train_dataset), "test samples:", len(test_dataset))
+print("num_features:", train_dataset.num_features, test_dataset.num_features)
+
+
+""" ======================================== Build a GNN ======================================== """
+
+# See https://github.com/rusty1s/pytorch_geometric/blob/master/examples/enzymes_topk_pool.py
+
+# embed_dim = 128
+# from torch_geometric.nn import TopKPooling
+# from torch_geometric.nn import global_mean_pool as gap, global_max_pool as gmp
+# import torch.nn.functional as F
+
+# class Net(torch.nn.Module):
+#     def __init__(self):
+#         super(Net, self).__init__()
+
 
 
 
