@@ -10,7 +10,8 @@ import torch
 import numpy as np
 from torch_geometric.data import Data
 
-ROOT_PATH = "/home/rog/rs/gcn/paths19/test_146/"
+#ROOT_PATH = "/home/rog/rs/gcn/paths19/test_146/"
+ROOT_PATH = "./data/"
 NODE_FILE_PATH = ROOT_PATH + "sub_gcn_dataset.txt"
 EDGES_FILE_PATH = ROOT_PATH + "sub_edges.txt"
 NUM_CLASSES = 15
