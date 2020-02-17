@@ -49,11 +49,13 @@ def read_dataset():
                         label = sample['label']
                         raw_edges = edge_data[label-1][str(label)] # Edges include id of node being processed, so remove it. 
                         #neighbours = torch.LongTensor([neighbour_id for neighbour_id in raw_edges if neighbour_id != node_id])
-                        edge_index = [[], []]
+                        e_from = []
+                        e_to = []
                         for neighbour_id in raw_edges:
                             if neighbour_id != node_id:
-                                edge_index[0].append(node_id)
-                                edge_index[1].append(neighbour_id)
+                                e_from.append(node_id)
+                                e_to.append(neighbour_id)
+                        edge_index = torch.LongTensor([e_from, e_to])
                         data = Data(x=features, y=torch.IntTensor([label]), edge_index=edge_index)
                         print("node_id:", node_id, "x:", features, "y:", label, "edge_index:", edge_index)
                         data_list.append(data)
@@ -90,6 +92,9 @@ if is_data_fetched:
     print("data_list len:", len(data_list))
     for data in data_list:
         print("x:", data.x, "y:", data.y, "edge_index:", data.edge_index)
+        print("types x:", type(data.x), "y:", type(data.y), "edge_index:",
+              type(data.edge_index))
+        print("=" * 50)
 
 """
 if ret_val[0] is True:
