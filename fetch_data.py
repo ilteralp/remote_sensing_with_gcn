@@ -47,39 +47,13 @@ def read_dataset():
                         node_id = sample['nodeId']
                         features = sample['features']
                         label = sample['label']
-                        raw_edges = edge_data[label-1][str(label)] # includes that node_id, need to remove it. 
+                        raw_edges = edge_data[label-1][str(label)] # Edges include id of node being processed, some remove it. 
                         neighbours = [neigbour_id for neigbour_id in raw_edges if neigbour_id != node_id]
-                        #print("node_id:", node_id, "label:", label, "neighbours:", neighbours)
                         data = Data(x=features, y=label, edge_index=neighbours)
                         print("node_id:", node_id, "x:", features, "y:", label, "edge_index:", neighbours)
                         data_list.append(data)
                     return True, data_list
                     
-                    # """ ====================== x ====================== """
-                    # x = torch.FloatTensor([sample['features'] for sample in node_data])
-                     
-                    # """ ====================== y ====================== """
-                    # y = torch.IntTensor([sample['label'] for sample in node_data])
-                    
-                    # """ ====================== edge_index ====================== """
-                    # edges = []
-                    # edges.append([])
-                    # edges.append([])
-                    # for i, sample_class in enumerate(edge_data):
-                    #     class_edges = sample_class[str(i+1)]
-                    #     if len(class_edges) > 0:
-                    #         for edge in class_edges:
-                            
-                    # """
-                    # # Node ids
-                    # # Read data and turn it into torch tensor
-                    # X = torch.from_numpy(np.asarray([sample['nodeId'] for sample in node_data]))
-                    # print(X)
-                    # print(type(X))
-                    # """
-                    # return True, x, y
-        
-    
 """
 Reads given edges file where relations between nodes are binary 
 and two nodes are connected if they belong to the same class. 
