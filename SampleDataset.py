@@ -62,8 +62,6 @@ def read_sample_dataset():
                 e_from.append(node_id)
                 e_to.append(edges[1][index])
         edge_index = torch.LongTensor([e_from, e_to])
-        # print("types x:", type(x), "y:", type(y), "edge_index:", type(edge_index), 
-        #       "edge_index[0]:", type(edge_index[0]), type(edge_index[1]))
         data_list.append(Data(x=x, y=y, edge_index=edge_index))
     return True, data_list
     
