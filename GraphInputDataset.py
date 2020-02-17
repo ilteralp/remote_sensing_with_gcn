@@ -111,9 +111,11 @@ EDGES_FILE_PATH = ROOT_PATH + "edges.txt"
 info_path = ROOT_PATH +"info.txt"
 """
 dataset = GraphInputDataset(ROOT_PATH)
-#print(train_dataset.processed_dir)
-#test_dataset = GraphInputDataset(ROOT_PATH, train=False)
-
+# Create train & test datasets 
+train_dataset = dataset[:NUM_TRAIN_SAMPLES]
+test_dataset = dataset[NUM_TRAIN_SAMPLES:]
+train_dataset = train_dataset.shuffle()
+print(len(train_dataset), len(test_dataset))
 
 
 
