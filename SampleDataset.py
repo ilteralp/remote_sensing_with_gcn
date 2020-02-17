@@ -7,6 +7,7 @@ Created on Mon Feb 17 17:39:56 2020
 """
 import torch
 from torch_geometric.data import InMemoryDataset, Data
+import numpy as np
 
 class SampleDataset(InMemoryDataset):
     def __init__(self, root, transform=None, pre_transform=None):
@@ -33,6 +34,8 @@ class SampleDataset(InMemoryDataset):
             print("data_list len:", len(data_list))
             for data in data_list:
                 print("x:", data.x, "y:", data.y, "edge_index:", data.edge_index)
+                # print("types x:", type(data.x), "y:", type(data.y), "edge_index:",
+                #       type(data.edge_index))
                 
             if self.pre_filter is not None:
                 data_list = [data for data in data_list if self.pre_filter(data)]
@@ -50,8 +53,8 @@ def read_sample_dataset():
     
     data_list = []
     for node_index, feat in enumerate(feats):
-        x =  torch.FloatTensor(feat)
-        y = torch.FloatTensor(labels[node_index]) # Float olmalı !
+        x = torch.FloatTensor(feat)
+        y = torch.IntTensor([labels[node_index]]) # Float olmalı !
         e_from = []
         e_to = []
         for index, node_id in enumerate(edges[0]):
@@ -59,6 +62,8 @@ def read_sample_dataset():
                 e_from.append(node_id)
                 e_to.append(edges[1][index])
         edge_index = torch.LongTensor([e_from, e_to])
+        # print("types x:", type(x), "y:", type(y), "edge_index:", type(edge_index), 
+        #       "edge_index[0]:", type(edge_index[0]), type(edge_index[1]))
         data_list.append(Data(x=x, y=y, edge_index=edge_index))
     return True, data_list
     
