@@ -20,23 +20,25 @@ NUM_TEST_SAMPLES = 12197
 TOTAL_SAMPLES = 6
 
 """
-Reads given dataset file containing both train and test samples
-where first NUM_TRAIN_SAMPLES one belongs to train set. 
+Reads given dataset file which includes all data samples (contains test and 
+train set together) and edge file which contains relations between nodes 
+where two nodes are connected if they belong to the same class. Returns 
+resulting graph that is undirected. 
 """
 def read_dataset():
-    with open(NODE_FILE_PATH) as node_file:
+    with open(NODE_FILE_PATH) as node_file: # Read node file. 
         node_data = json.load(node_file)
-        # Check total samples
+        # Check total number samples
         if len(node_data) != TOTAL_SAMPLES:
             print("Samples length:", len(node_data), "vs", TOTAL_SAMPLES)
-            return False
+            return False, []
         else:
-            with open(EDGES_FILE_PATH) as edge_file:
+            with open(EDGES_FILE_PATH) as edge_file: # Read edge file. 
                 edge_data = json.load(edge_file)
                 # Check number of classes
                 if len(edge_data) != NUM_CLASSES:
                     print("Classes length", len(edge_data))
-                    return False
+                    return False, []
                 else:
                     data_list = []
                     # Fetch each sample seperately
@@ -48,11 +50,9 @@ def read_dataset():
                         neighbours = [neigbour_id for neigbour_id in raw_edges if neigbour_id != node_id]
                         #print("node_id:", node_id, "label:", label, "neighbours:", neighbours)
                         data = Data(x=features, y=label, edge_index=neighbours)
-                        print("x:", features, "y:", label, "edge_index:", neighbours)
+                        print("node_id:", node_id, "x:", features, "y:", label, "edge_index:", neighbours)
                         data_list.append(data)
-                    print(len(data_list))
-                    for data in data_list:
-                        print(data)
+                    return True, data_list
                     
                     # """ ====================== x ====================== """
                     # x = torch.FloatTensor([sample['features'] for sample in node_data])
@@ -105,7 +105,12 @@ def read_edges():
             return True, torch.LongTensor(edges)
    
 # Read dataset
-ret_val = read_dataset()
+is_data_fetched, data_list = read_dataset()
+if is_data_fetched:
+    print("data_list len:", len(data_list))
+    for data in data_list:
+        print("x:", data.x, "y:", data.y, "edge_index:", data.edge_index)
+
 """
 if ret_val[0] is True:
     _, x, y = ret_val
