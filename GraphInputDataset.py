@@ -29,6 +29,7 @@ print("Test", test_id)
 ROOT_PATH = "/home/rog/rs/gcn/paths19/test_" + str(test_id) + "/"
 NODE_FILE_PATH = ROOT_PATH + "sub_gcn_dataset.txt"
 EDGES_FILE_PATH = ROOT_PATH + "sub_edges.txt"
+NUM_FEATURES = 1
 
 """
 info_path = ROOT_PATH +"info.txt"
@@ -44,6 +45,11 @@ class GraphInputDataset(InMemoryDataset):
         super(GraphInputDataset, self).__init__(root, transform, pre_transform)
         path = self.processed_paths[0]
         self.data, self.slices = torch.load(path)
+        # for key, val in self.data:
+        #     print(key, ":", val)
+        #     print(key, "shape:", val.shape)
+        print("num_nodes:", self.data.num_nodes)
+        print("num_node_features:", self.num_node_features)
 
     # The name of the files to find in the self.raw_dir folder in order to skip the download.
     @property
@@ -116,7 +122,8 @@ def read_dataset():
                     # Fetch each sample seperately
                     for sample in node_data:
                         node_id = sample['nodeId']
-                        features = torch.FloatTensor(sample['features'])
+                        features = torch.FloatTensor(sample['features']) # 1D, convert to 2d
+                        features = features.view(1, features.shape[0])   # Data expects [num_nodes, num_node_features]
                         label = sample['label']
                         raw_edges = edge_data[label-1][str(label)] # Edges include id of node being processed, so remove it. 
                         #neighbours = torch.LongTensor([neighbour_id for neighbour_id in raw_edges if neighbour_id != node_id])
@@ -127,9 +134,14 @@ def read_dataset():
                                 e_from.append(node_id)
                                 e_to.append(neighbour_id)
                         edge_index = torch.LongTensor([e_from, e_to])
+                        #print("shapes", features.shape, torch.IntTensor([label]).shape, edge_index.shape)
                         data = Data(x=features, y=torch.IntTensor([label]), edge_index=edge_index)
+                        #print(data)
                         #print("node_id:", node_id, "x:", features, "y:", label, "edge_index:", edge_index)
                         data_list.append(data)
+                        #print("num_nodes", data.num_nodes, "num_features", data.num_features)
+                        #print("=" * 50)
+                        #print("fetched data")
                     return True, data_list
                 
 # Create dataset
@@ -168,11 +180,11 @@ class Net(torch.nn.Module):
     def forward(self, data):
             x, edge_index, batch = data.x, data.edge_index, data.batch
     
-            print("x.shape:", x.shape, "edge_index", edge_index.shape, "batch", batch.shape)
+            #print("x.shape:", x.shape, "edge_index", edge_index.shape, "batch", batch.shape)
             x = F.relu(self.conv1(x, edge_index))
-            print("relud")
+            #print("relud")
             x, edge_index, _, batch, _, _ = self.pool1(x, edge_index, None, batch)
-            print("pooled")
+            #print("pooled")
             x1 = torch.cat([gmp(x, batch), gap(x, batch)], dim=1)
     
             x = F.relu(self.conv2(x, edge_index))
@@ -227,7 +239,6 @@ for epoch in range(1, 201):
     test_acc = test(test_loader)
     print('Epoch: {:03d}, Loss: {:.5f}, Train Acc: {:.5f}, Test Acc: {:.5f}'.
           format(epoch, loss, train_acc, test_acc))
-
 
 
 
