@@ -9,14 +9,19 @@ Created on Fri Jan 31 10:46:25 2020
 import json
 import torch
 from torch_geometric.data import InMemoryDataset, Data
-from sklearn.preprocessing import LabelEncoder
-import pandas as pd
+from torch_geometric.data import DataLoader
+from torch_geometric.nn import GraphConv, TopKPooling
+from torch_geometric.nn import global_mean_pool as gap, global_max_pool as gmp
+import torch.nn.functional as F
+
 
 NUM_CLASSES = 15
 NUM_TRAIN_SAMPLES = 2832
 NUM_TEST_SAMPLES = 12197
 TOTAL_SAMPLES = NUM_TRAIN_SAMPLES + NUM_TEST_SAMPLES
-#TOTAL_SAMPLES = 3
+#TOTAL_SAMPLES = 6
+if TOTAL_SAMPLES == 6:
+    NUM_TRAIN_SAMPLES = 3
 
 """ ======================================== Create Dataset ======================================== """
 
@@ -64,6 +69,15 @@ class GraphInputDataset(InMemoryDataset):
             
             data, slices = self.collate(data_list)
             torch.save((data, slices), self.processed_paths[0])
+            
+            # print("After collate")
+            # for sl in slices:
+            #     print(sl)
+            # print("=" * 20, "After slices")
+            # for datum in data:
+            #     print(datum)
+        else:
+            print("Dataset cannot be read! Given", NODE_FILE_PATH, "and", EDGES_FILE_PATH)
             
 
 """
@@ -125,20 +139,11 @@ test_dataset = dataset[NUM_TRAIN_SAMPLES:]
 train_dataset = train_dataset.shuffle()
 print("Train samples:", len(train_dataset), "test samples:", len(test_dataset))
 print("num_features:", train_dataset.num_features, test_dataset.num_features)
+test_loader = DataLoader(test_dataset, batch_size=60)
+train_loader = DataLoader(train_dataset, batch_size=60)
 
 
-""" ======================================== Build a GNN ======================================== """
 
-# See https://github.com/rusty1s/pytorch_geometric/blob/master/examples/enzymes_topk_pool.py
-
-# embed_dim = 128
-# from torch_geometric.nn import TopKPooling
-# from torch_geometric.nn import global_mean_pool as gap, global_max_pool as gmp
-# import torch.nn.functional as F
-
-# class Net(torch.nn.Module):
-#     def __init__(self):
-#         super(Net, self).__init__()
 
 
 
