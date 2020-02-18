@@ -18,10 +18,21 @@ import torch.nn.functional as F
 NUM_CLASSES = 15
 NUM_TRAIN_SAMPLES = 2832
 NUM_TEST_SAMPLES = 12197
-TOTAL_SAMPLES = NUM_TRAIN_SAMPLES + NUM_TEST_SAMPLES
-#TOTAL_SAMPLES = 6
+#TOTAL_SAMPLES = NUM_TRAIN_SAMPLES + NUM_TEST_SAMPLES
+TOTAL_SAMPLES = 6
 if TOTAL_SAMPLES == 6:
     NUM_TRAIN_SAMPLES = 3
+    
+# Constants
+test_id = 146   # Variable length input
+print("Test", test_id)
+ROOT_PATH = "/home/rog/rs/gcn/paths19/test_" + str(test_id) + "/"
+NODE_FILE_PATH = ROOT_PATH + "sub_gcn_dataset.txt"
+EDGES_FILE_PATH = ROOT_PATH + "sub_edges.txt"
+
+"""
+info_path = ROOT_PATH +"info.txt"
+"""
 
 """ ======================================== Create Dataset ======================================== """
 
@@ -121,17 +132,7 @@ def read_dataset():
                         data_list.append(data)
                     return True, data_list
                 
-        
-# Constants
-test_id = 146   # Variable length input
-print("Test", test_id)
-ROOT_PATH = "/home/rog/rs/gcn/paths19/test_" + str(test_id) + "/"
-NODE_FILE_PATH = ROOT_PATH + "gcn_dataset.txt"
-EDGES_FILE_PATH = ROOT_PATH + "edges.txt"
-
-"""
-info_path = ROOT_PATH +"info.txt"
-"""
+# Create dataset
 dataset = GraphInputDataset(ROOT_PATH)
 # Create train & test datasets 
 train_dataset = dataset[:NUM_TRAIN_SAMPLES]
@@ -139,6 +140,7 @@ test_dataset = dataset[NUM_TRAIN_SAMPLES:]
 train_dataset = train_dataset.shuffle()
 print("Train samples:", len(train_dataset), "test samples:", len(test_dataset))
 print("num_features:", train_dataset.num_features, test_dataset.num_features)
+print("num_classes:", train_dataset.num_classes, test_dataset.num_classes)
 test_loader = DataLoader(test_dataset, batch_size=60)
 train_loader = DataLoader(train_dataset, batch_size=60)
 
@@ -152,23 +154,25 @@ embed_dim = 128
 class Net(torch.nn.Module):
     def __init__(self):
         super(Net, self).__init__()
-        
         self.conv1 = GraphConv(dataset.num_features, 128)
-        self.pool1 = TopKPooling(128, ratio=0.8)
-        self.conv2 = GraphConv(128, 128)
-        self.pool2 = TopKPooling(128, ratio=0.8)
-        self.conv3 = GraphConv(128, 128)
-        self.pool3 = TopKPooling(128, ratio=0.8)
+        # self.pool1 = TopKPooling(128, ratio=0.8)
+        # self.conv2 = GraphConv(128, 128)
+        # self.pool2 = TopKPooling(128, ratio=0.8)
+        # self.conv3 = GraphConv(128, 128)
+        # self.pool3 = TopKPooling(128, ratio=0.8)
         
-        self.lin1 = torch.nn.Linear(256, 128)
-        self.lin2 = torch.nn.Linear(128, 64)
+        # self.lin1 = torch.nn.Linear(256, 128)
+        # self.lin2 = torch.nn.Linear(128, 64)
         self.lin3 = torch.nn.Linear(64, dataset.num_classes)
         
     def forward(self, data):
             x, edge_index, batch = data.x, data.edge_index, data.batch
     
+            print("x.shape:", x.shape, "edge_index", edge_index.shape, "batch", batch.shape)
             x = F.relu(self.conv1(x, edge_index))
+            print("relud")
             x, edge_index, _, batch, _, _ = self.pool1(x, edge_index, None, batch)
+            print("pooled")
             x1 = torch.cat([gmp(x, batch), gap(x, batch)], dim=1)
     
             x = F.relu(self.conv2(x, edge_index))
