@@ -8,17 +8,21 @@ Created on Fri Jan 31 10:46:25 2020
 
 import json
 import torch
-from torch_geometric.data import InMemoryDataset, Data
+from torch_geometric.data import InMemoryDataset, Data, Batch
 from torch_geometric.data import DataLoader
 from torch_geometric.nn import GraphConv, TopKPooling
 from torch_geometric.nn import global_mean_pool as gap, global_max_pool as gmp
 import torch.nn.functional as F
+import os
+
+
+#os.environ['CUDA_LAUNCH_BLOCKING'] = '1'
 
 
 NUM_CLASSES = 15
 NUM_TRAIN_SAMPLES = 2832
 NUM_TEST_SAMPLES = 12197
-#TOTAL_SAMPLES = NUM_TRAIN_SAMPLES + NUM_TEST_SAMPLES
+TOTAL_SAMPLES = NUM_TRAIN_SAMPLES + NUM_TEST_SAMPLES
 TOTAL_SAMPLES = 6
 if TOTAL_SAMPLES == 6:
     NUM_TRAIN_SAMPLES = 3
@@ -45,11 +49,11 @@ class GraphInputDataset(InMemoryDataset):
         super(GraphInputDataset, self).__init__(root, transform, pre_transform)
         path = self.processed_paths[0]
         self.data, self.slices = torch.load(path)
-        # for key, val in self.data:
-        #     print(key, ":", val)
-        #     print(key, "shape:", val.shape)
-        print("num_nodes:", self.data.num_nodes)
-        print("num_node_features:", self.num_node_features)
+        for key, val in self.data:
+            print(key, ":", val)
+            print(key, "shape:", val.shape)
+        # print("num_nodes:", self.data.num_nodes)
+        # print("num_node_features:", self.num_node_features)
 
     # The name of the files to find in the self.raw_dir folder in order to skip the download.
     @property
@@ -124,8 +128,8 @@ def read_dataset():
                         node_id = sample['nodeId']
                         features = torch.FloatTensor(sample['features']) # 1D, convert to 2d
                         features = features.view(1, features.shape[0])   # Data expects [num_nodes, num_node_features]
-                        label = sample['label']
-                        raw_edges = edge_data[label-1][str(label)] # Edges include id of node being processed, so remove it. 
+                        label = sample['label'] - 1                      # -1 since classes start from 1
+                        raw_edges = edge_data[label][str(label+1)] # Edges include id of node being processed, so remove it. 
                         #neighbours = torch.LongTensor([neighbour_id for neighbour_id in raw_edges if neighbour_id != node_id])
                         e_from = []
                         e_to = []
@@ -149,16 +153,68 @@ dataset = GraphInputDataset(ROOT_PATH)
 # Create train & test datasets 
 train_dataset = dataset[:NUM_TRAIN_SAMPLES]
 test_dataset = dataset[NUM_TRAIN_SAMPLES:]
-train_dataset = train_dataset.shuffle()
-print("Train samples:", len(train_dataset), "test samples:", len(test_dataset))
-print("num_features:", train_dataset.num_features, test_dataset.num_features)
-print("num_classes:", train_dataset.num_classes, test_dataset.num_classes)
-test_loader = DataLoader(test_dataset, batch_size=60)
-train_loader = DataLoader(train_dataset, batch_size=60)
+#train_dataset = train_dataset.shuffle()
+# print("=" * 20, "first", "=" * 20)
+# print(train_dataset[0], "\nfeatures:\n", train_dataset[0].x, "\nedges:\n", train_dataset[0].edge_index)
+# print("=" * 60)
+
+print("=" * 60)
+print("train_dataset")
+print(train_dataset)
+for train_sample in train_dataset:
+    print("\nfeatures:\n", train_sample.x, "\nedges:\n", train_sample.edge_index)
+print("=" * 60)
+
+print("," * 60)
+print("from_data_list")
+my_batch = Batch.from_data_list(train_dataset)
+for train_sample in my_batch:
+    print(train_sample)
+    #print("\nfeatures:\n", train_sample.x, "\nedges:\n", train_sample.edge_index)
+print("," * 60)
+
+print("!" * 60)
+print("to_data_list")
+my_data_list = my_batch.to_data_list()
+for train_sample in my_data_list:
+    #print(train_sample)
+    print("\nfeatures:\n", train_sample.x, "\nedges:\n", train_sample.edge_index)
+print("!" * 60)    
+# print("Train samples:", len(train_dataset), "test samples:", len(test_dataset))
+# print("num_features:", train_dataset.num_features, test_dataset.num_features)
+# print("num_classes:", train_dataset.num_classes, test_dataset.num_classes)
+train_loader = DataLoader(train_dataset, batch_size=NUM_TRAIN_SAMPLES)
+test_loader = DataLoader(test_dataset, batch_size=NUM_TRAIN_SAMPLES)
+print("-" * 100)
+print("train_loader before device")
+print(train_loader)
+for train_sample in train_loader:
+    print("\nfeatures:\n", train_sample.x, "\nedges:\n", train_sample.edge_index)
+print("-" * 100)
+""" ======================================== Build a GNN ======================================== """
+# from torch_geometric.nn import SplineConv
+
+# class Net(torch.nn.Module):
+#     def __init__(self):
+#         super(Net, self).__init__()
+#         self.conv1 = SplineConv(dataset.num_features, 16, dim=1, kernel_size=2)
+#         self.conv2 = SplineConv(16, dataset.num_classes, dim=1, kernel_size=2)
+
+#     def forward(self):
+#         x, edge_index, edge_attr = data.x, data.edge_index, data.edge_attr
+#         x = F.dropout(x, training=self.training)
+#         x = F.elu(self.conv1(x, edge_index, edge_attr))
+#         x = F.dropout(x, training=self.training)
+#         x = self.conv2(x, edge_index, edge_attr)
+#         return F.log_softmax(x, dim=1)
+    
+    
+    
+    
+
 
 
 """ ======================================== Build a GNN ======================================== """
-
 # See https://github.com/rusty1s/pytorch_geometric/blob/master/examples/enzymes_topk_pool.py
 
 embed_dim = 128
@@ -167,20 +223,21 @@ class Net(torch.nn.Module):
     def __init__(self):
         super(Net, self).__init__()
         self.conv1 = GraphConv(dataset.num_features, 128)
-        # self.pool1 = TopKPooling(128, ratio=0.8)
-        # self.conv2 = GraphConv(128, 128)
-        # self.pool2 = TopKPooling(128, ratio=0.8)
-        # self.conv3 = GraphConv(128, 128)
-        # self.pool3 = TopKPooling(128, ratio=0.8)
+        self.pool1 = TopKPooling(128, ratio=0.8)
+        self.conv2 = GraphConv(128, 128)
+        self.pool2 = TopKPooling(128, ratio=0.8)
+        self.conv3 = GraphConv(128, 128)
+        self.pool3 = TopKPooling(128, ratio=0.8)
         
-        # self.lin1 = torch.nn.Linear(256, 128)
-        # self.lin2 = torch.nn.Linear(128, 64)
+        self.lin1 = torch.nn.Linear(256, 128)
+        self.lin2 = torch.nn.Linear(128, 64)
         self.lin3 = torch.nn.Linear(64, dataset.num_classes)
         
     def forward(self, data):
             x, edge_index, batch = data.x, data.edge_index, data.batch
-    
-            #print("x.shape:", x.shape, "edge_index", edge_index.shape, "batch", batch.shape)
+            print("forward")
+            print("x.shape:", x.shape, "edge_index", edge_index.shape, "batch", batch.shape)
+            print("check", x, edge_index)
             x = F.relu(self.conv1(x, edge_index))
             #print("relud")
             x, edge_index, _, batch, _, _ = self.pool1(x, edge_index, None, batch)
@@ -204,7 +261,8 @@ class Net(torch.nn.Module):
     
             return x
         
-device = torch.device('cuda' if torch.cuda.is_available() else 'cpu')
+#device = torch.device('cuda' if torch.cuda.is_available() else 'cpu')
+device = torch.device('cpu')
 print("device:", device)
 model = Net().to(device)
 optimizer = torch.optim.Adam(model.parameters(), lr=0.0005)
@@ -215,6 +273,12 @@ def train(epoch):
     loss_all = 0
     for data in train_loader:
         data = data.to(device)
+        print("+" * 50)
+        print("data in device")
+        for train_sample in data:
+            print(train_sample)
+            #print("\nfeatures:\n", train_sample.x, "\nedges:\n", train_sample.edge_index)
+        print("+" * 50)
         optimizer.zero_grad()
         output = model(data)
         loss = F.nll_loss(output, data.y)
@@ -239,8 +303,6 @@ for epoch in range(1, 201):
     test_acc = test(test_loader)
     print('Epoch: {:03d}, Loss: {:.5f}, Train Acc: {:.5f}, Test Acc: {:.5f}'.
           format(epoch, loss, train_acc, test_acc))
-
-
 
 
 
