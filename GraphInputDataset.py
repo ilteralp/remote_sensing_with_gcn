@@ -164,13 +164,6 @@ def read_dataset(node_file_path, edge_file_path):
 # Create dataset
 train_dataset = GraphInputDataset(ROOT_PATH, train=True)
 test_dataset = GraphInputDataset(ROOT_PATH, train=False)
-# Create train & test datasets 
-#train_dataset = dataset[:NUM_TRAIN_SAMPLES]
-#test_dataset = dataset[NUM_TRAIN_SAMPLES:]
-#train_dataset = train_dataset.shuffle()
-# print("=" * 20, "first", "=" * 20)
-# print(train_dataset[0], "\nfeatures:\n", train_dataset[0].x, "\nedges:\n", train_dataset[0].edge_index)
-# print("=" * 60)
 
 print("=" * 60)
 print("train_dataset")
@@ -189,6 +182,19 @@ for test_sample in test_dataset.data:
     print(test_sample)
     #print("\nfeatures:\n", test_sample.x, "\nedges:\n", test_sample.edge_index)
 print("=" * 60)
+
+# Check number of classes & features of nodes in datasets 
+assert train_dataset.num_classes == test_dataset.num_classes
+assert train_dataset.num_features == test_dataset.num_features
+
+
+# Create train & test datasets 
+#train_dataset = dataset[:NUM_TRAIN_SAMPLES]
+#test_dataset = dataset[NUM_TRAIN_SAMPLES:]
+#train_dataset = train_dataset.shuffle()
+# print("=" * 20, "first", "=" * 20)
+# print(train_dataset[0], "\nfeatures:\n", train_dataset[0].x, "\nedges:\n", train_dataset[0].edge_index)
+# print("=" * 60)
 
 
 # print("," * 60)
