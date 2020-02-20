@@ -243,7 +243,7 @@ print("=" * 60)
 class Net(torch.nn.Module):
     def __init__(self):
         super(Net, self).__init__()
-        self.conv1 = GraphConv(train_dataset.data.num_features, 128)
+        self.conv1 = GraphConv(train_dataset.num_features, 128)
         self.pool1 = TopKPooling(128, ratio=0.8)
         self.conv2 = GraphConv(128, 128)
         self.pool2 = TopKPooling(128, ratio=0.8)
