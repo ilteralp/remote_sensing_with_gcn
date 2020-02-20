@@ -36,10 +36,6 @@ ROOT_PATH = "/home/rog/rs/gcn/paths19/test_" + str(test_id) + "/"
 #EDGES_FILE_PATH = ROOT_PATH + "sub_edges.txt"
 NUM_FEATURES = 1
 
-"""
-info_path = ROOT_PATH +"info.txt"
-"""
-
 """ ======================================== Create Dataset ======================================== """
 
 """
@@ -257,7 +253,7 @@ class Net(torch.nn.Module):
         
     def forward(self, data):
             x, edge_index, batch = data.x, data.edge_index, data.batch
-            #x = F.relu(self.conv1(x, edge_index))
+            x = F.relu(self.conv1(x, edge_index))
             x, edge_index, _, batch, _, _ = self.pool1(x, edge_index, None, batch)
             x1 = torch.cat([gmp(x, batch), gap(x, batch)], dim=1)
             x = F.relu(self.conv2(x, edge_index))
@@ -274,8 +270,8 @@ class Net(torch.nn.Module):
     
             return x
         
-#device = torch.device('cuda' if torch.cuda.is_available() else 'cpu')
-device = torch.device('cpu')
+device = torch.device('cuda' if torch.cuda.is_available() else 'cpu')
+#device = torch.device('cpu')
 print("device:", device)
 model = Net().to(device)
 optimizer = torch.optim.Adam(model.parameters(), lr=0.0005)
