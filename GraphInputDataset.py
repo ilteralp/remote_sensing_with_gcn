@@ -49,8 +49,6 @@ class GraphInputDataset(InMemoryDataset):
     def __init__(self, root, train, transform=None, pre_transform=None):
         
         super(GraphInputDataset, self).__init__(root, transform, pre_transform)
-        
-        print("root", self.root, "train", train, "transform", self.transform, "pre_transform", self.pre_transform, "other", transform)
         path = self.processed_paths[0] if train else self.processed_paths[1]
         self.data, self.slices = torch.load(path)
         
@@ -89,11 +87,9 @@ class GraphInputDataset(InMemoryDataset):
             # Read data into huge `Data` list.
             is_data_fetched, data_list = read_dataset(node_file_path, edge_file_path)
             if is_data_fetched:
-                print("data_list len:", len(data_list))
-                """
-                for data in data_list:
-                    print("x:", data.x, "y:", data.y, "edge_index:", data.edge_index)
-                """
+                # print("data_list len:", len(data_list))
+                # for data in data_list:
+                #     print("x:", data.x, "y:", data.y, "edge_index:", data.edge_index)
                 
                 if self.pre_filter is not None:
                     data_list = [data for data in data_list if self.pre_filter(data)]
@@ -244,7 +240,6 @@ assert train_dataset.num_features == test_dataset.num_features
 
 """ ======================================== Build a GNN ======================================== """
 # See https://github.com/rusty1s/pytorch_geometric/blob/master/examples/enzymes_topk_pool.py
-# embed_dim = 128
 
 class Net(torch.nn.Module):
     def __init__(self):
@@ -262,7 +257,7 @@ class Net(torch.nn.Module):
         
     def forward(self, data):
             x, edge_index, batch = data.x, data.edge_index, data.batch
-            x = F.relu(self.conv1(x, edge_index))
+            #x = F.relu(self.conv1(x, edge_index))
             x, edge_index, _, batch, _, _ = self.pool1(x, edge_index, None, batch)
             x1 = torch.cat([gmp(x, batch), gap(x, batch)], dim=1)
             x = F.relu(self.conv2(x, edge_index))
@@ -304,18 +299,23 @@ def test(loader):
     correct = 0
     for data in loader:
         data = data.to(device)
-        print("out")
-        #pred = model(data).max(dim=1)[1]
-        out = model(data)
-        print("out is", out)
-        print("pred")
-        pred = out.max(dim=1)[1]
-        print("correct")
+        pred = model(data).max(dim=1)[1]
         correct += pred.eq(data.y).sum().item()
     return correct / len(loader.dataset)
 
 train_loader = DataLoader(train_dataset, batch_size=32)
 test_loader = DataLoader(test_dataset, batch_size=32)
+
+print("-" * 100)
+print('train_loader')
+for train_sample in train_loader:
+    print("\nfeatures:\n", train_sample.x, "\nedges:\n", train_sample.edge_index)
+print("-" * 100)
+
+print('test_loader')
+for test_sample in test_loader:
+    print("\nfeatures:\n", test_sample.x, "\nedges:\n", test_sample.edge_index)
+print("-" * 100)
 
 for epoch in range(1, 201):
     loss = train(epoch)
