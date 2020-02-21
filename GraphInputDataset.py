@@ -17,9 +17,6 @@ import os
 import os.path as osp
 
 
-#os.environ['CUDA_LAUNCH_BLOCKING'] = '1'
-
-
 NUM_CLASSES = 15
 NUM_TRAIN_SAMPLES = 2832
 NUM_TEST_SAMPLES = 12197
@@ -32,9 +29,6 @@ TOTAL_SAMPLES = 4
 test_id = 146   # Variable length input
 print("Test", test_id)
 ROOT_PATH = "/home/rog/rs/gcn/paths19/test_" + str(test_id) + "/"
-#NODE_FILE_PATH = ROOT_PATH + "sub_gcn_dataset.txt"
-#EDGES_FILE_PATH = ROOT_PATH + "sub_edges.txt"
-NUM_FEATURES = 1
 
 """ ======================================== Create Dataset ======================================== """
 
@@ -60,7 +54,6 @@ class GraphInputDataset(InMemoryDataset):
     # The name of the files to find in the self.raw_dir folder in order to skip the download.
     @property
     def raw_file_names(self):
-        #return ['train', 'test']
         return ['sub_{}_edges.txt'.format(file_name) for file_name in ['train', 'test']]
     
     # A list of files in the processed_dir which needs to be found in order to skip the processing.
@@ -93,17 +86,10 @@ class GraphInputDataset(InMemoryDataset):
                 if self.pre_transform is not None:
                     data_list = [self.pre_transform(data) for data in data_list]
                 
-            data, slices = self.collate(data_list)
-            torch.save((data, slices), processed_path)
-            
-        #     # print("After collate")
-        #     # for sl in slices:
-        #     #     print(sl)
-        #     # print("=" * 20, "After slices")
-        #     # for datum in data:
-        #     #     print(datum)
-        # else:
-        #     print("Dataset cannot be read! Given", NODE_FILE_PATH, "and", EDGES_FILE_PATH)
+                data, slices = self.collate(data_list)
+                torch.save((data, slices), processed_path)
+            else:
+                print("Dataset cannot be read! Given", node_file_path, "and", edge_file_path)
             
 
 """
@@ -115,11 +101,6 @@ resulting graph that is undirected.
 def read_dataset(node_file_path, edge_file_path):
     with open(node_file_path) as node_file: # Read node file. 
         node_data = json.load(node_file)
-        # Check total number samples
-        # if len(node_data) != TOTAL_SAMPLES:
-        #     print("Samples length:", len(node_data), "vs", TOTAL_SAMPLES)
-        #     return False, []
-        # else:
         with open(edge_file_path) as edge_file: # Read edge file. 
             edge_data = json.load(edge_file)
             # Check number of classes
@@ -134,8 +115,7 @@ def read_dataset(node_file_path, edge_file_path):
                     features = torch.FloatTensor(sample['features']) # 1D, convert to 2d
                     features = features.view(1, features.shape[0])   # Data expects [num_nodes, num_node_features]
                     label = sample['label'] - 1                      # -1 since classes start from 1
-                    raw_edges = edge_data[label][str(label+1)] # Edges include id of node being processed, so remove it. 
-                    #neighbours = torch.LongTensor([neighbour_id for neighbour_id in raw_edges if neighbour_id != node_id])
+                    raw_edges = edge_data[label][str(label+1)]       # Edges include id of node being processed, so remove it. 
                     e_from = []
                     e_to = []
                     for neighbour_id in raw_edges:
@@ -143,14 +123,8 @@ def read_dataset(node_file_path, edge_file_path):
                             e_from.append(node_id)
                             e_to.append(neighbour_id)
                     edge_index = torch.LongTensor([e_from, e_to])
-                    #print("shapes", features.shape, torch.IntTensor([label]).shape, edge_index.shape)
                     data = Data(x=features, y=torch.LongTensor([label]), edge_index=edge_index)
-                    #print(data)
-                    #print("node_id:", node_id, "x:", features, "y:", label, "edge_index:", edge_index)
                     data_list.append(data)
-                    #print("num_nodes", data.num_nodes, "num_features", data.num_features)
-                    #print("=" * 50)
-                    #print("fetched data")
                 return True, data_list
                 
 # Create dataset
@@ -180,41 +154,6 @@ assert train_dataset.num_classes == test_dataset.num_classes
 assert train_dataset.num_features == test_dataset.num_features
 
 
-# Create train & test datasets 
-#train_dataset = dataset[:NUM_TRAIN_SAMPLES]
-#test_dataset = dataset[NUM_TRAIN_SAMPLES:]
-#train_dataset = train_dataset.shuffle()
-# print("=" * 20, "first", "=" * 20)
-# print(train_dataset[0], "\nfeatures:\n", train_dataset[0].x, "\nedges:\n", train_dataset[0].edge_index)
-# print("=" * 60)
-
-
-# print("," * 60)
-# print("from_data_list")
-# my_batch = Batch.from_data_list(train_dataset)
-# for train_sample in my_batch:
-#     print(train_sample)
-#     #print("\nfeatures:\n", train_sample.x, "\nedges:\n", train_sample.edge_index)
-# print("," * 60)
-
-# print("!" * 60)
-# print("to_data_list")
-# my_data_list = my_batch.to_data_list()
-# for train_sample in my_data_list:
-#     #print(train_sample)
-#     print("\nfeatures:\n", train_sample.x, "\nedges:\n", train_sample.edge_index)
-# print("!" * 60)    
-# # print("Train samples:", len(train_dataset), "test samples:", len(test_dataset))
-# # print("num_features:", train_dataset.num_features, test_dataset.num_features)
-# # print("num_classes:", train_dataset.num_classes, test_dataset.num_classes)
-# train_loader = DataLoader(train_dataset, batch_size=NUM_TRAIN_SAMPLES)
-# test_loader = DataLoader(test_dataset, batch_size=NUM_TRAIN_SAMPLES)
-# print("-" * 100)
-# print("train_loader before device")
-# print(train_loader)
-# for train_sample in train_loader:
-#     print("\nfeatures:\n", train_sample.x, "\nedges:\n", train_sample.edge_index)
-# print("-" * 100)
 """ ======================================== Build a GNN ======================================== """
 # from torch_geometric.nn import SplineConv
 
@@ -302,16 +241,16 @@ def test(loader):
 train_loader = DataLoader(train_dataset, batch_size=32)
 test_loader = DataLoader(test_dataset, batch_size=32)
 
-print("-" * 100)
-print('train_loader')
-for train_sample in train_loader:
-    print("\nfeatures:\n", train_sample.x, "\nedges:\n", train_sample.edge_index)
-print("-" * 100)
+# print("-" * 100)
+# print('train_loader')
+# for train_sample in train_loader:
+#     print("\nfeatures:\n", train_sample.x, "\nedges:\n", train_sample.edge_index)
+# print("-" * 100)
 
-print('test_loader')
-for test_sample in test_loader:
-    print("\nfeatures:\n", test_sample.x, "\nedges:\n", test_sample.edge_index)
-print("-" * 100)
+# print('test_loader')
+# for test_sample in test_loader:
+#     print("\nfeatures:\n", test_sample.x, "\nedges:\n", test_sample.edge_index)
+# print("-" * 100)
 
 for epoch in range(1, 201):
     loss = train(epoch)
