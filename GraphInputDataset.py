@@ -243,16 +243,15 @@ def test(loader):
 train_loader = DataLoader(train_dataset, batch_size=2)
 test_loader = DataLoader(test_dataset, batch_size=2)
 
-# print("-" * 100)
-# print('train_loader')
-# for train_sample in train_loader:
-#     print("\nfeatures:\n", train_sample.x, "\nedges:\n", train_sample.edge_index)
-# print("-" * 100)
 
-# print('test_loader')
-# for test_sample in test_loader:
-#     print("\nfeatures:\n", test_sample.x, "\nedges:\n", test_sample.edge_index)
-# print("-" * 100)
+for loader, name in zip([train_loader, test_loader], ['train_loader', 'test_loader']):
+    print("+" * 100)
+    print(name)
+    for num, sample in enumerate(loader):
+        print("sample:", num)
+        for key, val in sample:
+            print('\t', key, val)
+    print("+" * 100)
 
 for epoch in range(1, 201):
     loss = train(epoch)
