@@ -16,7 +16,6 @@ import torch.nn.functional as F
 import os
 import os.path as osp
 
-
 NUM_CLASSES = 15
 NUM_TRAIN_SAMPLES = 2832
 NUM_TEST_SAMPLES = 12197
@@ -42,19 +41,19 @@ class GraphInputDataset(InMemoryDataset):
         path = self.processed_paths[0] if train else self.processed_paths[1]
         self.data, self.slices = torch.load(path)
         
-        # print("=" * 50)
+        # print("*" * 50)
         # print("self.data")
         # for key, val in self.data:
         #     print(key, ":", val)
         #     print(key, "shape:", val.shape)
-        # print("=" * 50)
+        # print("*" * 50)
         # print("num_nodes:", self.data.num_nodes)
         # print("num_node_features:", self.data.num_node_features)
 
     # The name of the files to find in the self.raw_dir folder in order to skip the download.
     @property
     def raw_file_names(self):
-        return ['sub_{}_edges.txt'.format(file_name) for file_name in ['train', 'test']]
+        return ['{}_edges.txt'.format(file_name) for file_name in ['train', 'test']]
     
     # A list of files in the processed_dir which needs to be found in order to skip the processing.
     @property
@@ -70,8 +69,8 @@ class GraphInputDataset(InMemoryDataset):
     """
     def process(self):
         for split, processed_path in zip (['train', 'test'], self.processed_paths):
-            node_file_path = osp.join(self.root, 'sub_{}_gcn_dataset.txt'.format(split))
-            edge_file_path = osp.join(self.root, 'sub_{}_edges.txt'.format(split))
+            node_file_path = osp.join(self.root, '{}_gcn_dataset.txt'.format(split))
+            edge_file_path = osp.join(self.root, '{}_edges.txt'.format(split))
             
             # Read data into huge `Data` list.
             is_data_fetched, data_list = read_dataset(node_file_path, edge_file_path)
@@ -106,7 +105,6 @@ def read_dataset(node_file_path, edge_file_path):
             # Check number of classes
             if len(edge_data) != NUM_CLASSES:
                 print("Classes length", len(edge_data))
-                return False, []
             else:
                 data_list = []
                 # Fetch each sample seperately
@@ -126,7 +124,8 @@ def read_dataset(node_file_path, edge_file_path):
                     data = Data(x=features, y=torch.LongTensor([label]), edge_index=edge_index)
                     data_list.append(data)
                 return True, data_list
-                
+        return False, []
+    
 # Create dataset
 train_dataset = GraphInputDataset(ROOT_PATH, train=True)
 test_dataset = GraphInputDataset(ROOT_PATH, train=False)
@@ -135,19 +134,51 @@ print("=" * 60)
 print("train_dataset")
 print("num_classes:", train_dataset.num_classes)
 print("num_features", train_dataset.data.num_features)
+print("contains_isolated_nodes:", train_dataset.data.contains_isolated_nodes())
+print("contains_self_loops:", train_dataset.data.contains_self_loops())
+print("is_coalesced:", train_dataset.data.is_coalesced())
+print("is_undirected:", train_dataset.data.is_undirected())
+
+print("size:", train_dataset.data.x.size(), "x.size(0):", train_dataset.data.x.size(0))
 for train_sample in train_dataset.data:
     print(train_sample)
     #print("\nfeatures:\n", train_sample.x, "\nedges:\n", train_sample.edge_index)
 print("=" * 60)
 
+print("+" * 60)
+print("test_dataset")
+print("num_classes:", test_dataset.num_classes)
+print("num_features", test_dataset.data.num_features)
+print("contains_isolated_nodes:", test_dataset.data.contains_isolated_nodes())
+print("contains_self_loops:", test_dataset.data.contains_self_loops())
+print("is_coalesced:", test_dataset.data.is_coalesced())
+print("is_undirected:", test_dataset.data.is_undirected())
+
+
+print("size:", test_dataset.data.x.size(), "x.size(0):", test_dataset.data.x.size(0))
+for test_sample in test_dataset.data:
+    print(test_sample)
+print("+" * 60)
+
+print("@" * 50)
+print("train_dataset")
+print("num_classes:", train_dataset.num_classes)
+print("num_features", train_dataset.data.num_features)
+for key, val in train_dataset.data:
+    print(key)
+    print(val.size())
+print("@" * 50)
+
 print("=" * 60)
 print("test_dataset")
 print("num_classes:", test_dataset.num_classes)
 print("num_features", test_dataset.data.num_features)
-for test_sample in test_dataset.data:
-    print(test_sample)
+for key, val in test_dataset.data:
+    print(key)
+    print(val.size())
     #print("\nfeatures:\n", test_sample.x, "\nedges:\n", test_sample.edge_index)
 print("=" * 60)
+
 
 # Check number of classes & features of nodes in datasets 
 assert train_dataset.num_classes == test_dataset.num_classes
@@ -209,8 +240,8 @@ class Net(torch.nn.Module):
     
             return x
         
-device = torch.device('cuda' if torch.cuda.is_available() else 'cpu')
-#device = torch.device('cpu')
+#device = torch.device('cuda' if torch.cuda.is_available() else 'cpu')
+device = torch.device('cpu')
 print("device:", device)
 model = Net().to(device)
 optimizer = torch.optim.Adam(model.parameters(), lr=0.0005)
@@ -223,6 +254,7 @@ def train(epoch):
         data = data.to(device)
         optimizer.zero_grad()
         output = model(data)
+        print('output.size', output.size(), 'target.size', data.y.size())
         loss = F.nll_loss(output, data.y)
         loss.backward()
         loss_all += data.num_graphs * loss.item()
@@ -238,8 +270,8 @@ def test(loader):
         correct += pred.eq(data.y).sum().item()
     return correct / len(loader.dataset)
 
-train_loader = DataLoader(train_dataset, batch_size=32)
-test_loader = DataLoader(test_dataset, batch_size=32)
+train_loader = DataLoader(train_dataset, batch_size=2)
+test_loader = DataLoader(test_dataset, batch_size=2)
 
 # print("-" * 100)
 # print('train_loader')
