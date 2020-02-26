@@ -1,0 +1,4 @@
+[{"nodeId":3, "label":1, "features": [33, 51]},
+{"nodeId":6, "label":1, "features": [17, 41]},
+{"nodeId":7, "label":14, "features": [21, 88]},
+{"nodeId":5, "label":14, "features": [30, 63]}]
