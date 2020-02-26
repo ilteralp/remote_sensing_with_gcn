@@ -130,55 +130,25 @@ def read_dataset(node_file_path, edge_file_path):
 train_dataset = GraphInputDataset(ROOT_PATH, train=True)
 test_dataset = GraphInputDataset(ROOT_PATH, train=False)
 
-print("=" * 60)
-print("train_dataset")
-print("num_classes:", train_dataset.num_classes)
-print("num_features", train_dataset.data.num_features)
-print("contains_isolated_nodes:", train_dataset.data.contains_isolated_nodes())
-print("contains_self_loops:", train_dataset.data.contains_self_loops())
-print("is_coalesced:", train_dataset.data.is_coalesced())
-print("is_undirected:", train_dataset.data.is_undirected())
+for dataset, name in zip ([train_dataset, test_dataset], ['train_dataset', 'test_dataset']):
+    print("+" * 60)
+    print(name)
+    print("size:", dataset.data.x.size(), "x.size(0):", dataset.data.x.size(0))
+    print("num_classes:", dataset.num_classes)
+    print("num_features:", dataset.data.num_features)
+    print("contains_isolated_nodes:", dataset.data.contains_isolated_nodes())
+    print("contains_self_loops:", dataset.data.contains_self_loops())
+    print("is_coalesced:", dataset.data.is_coalesced())
+    print("is_undirected:", dataset.data.is_undirected())
+    print("+" * 60)
 
-print("size:", train_dataset.data.x.size(), "x.size(0):", train_dataset.data.x.size(0))
-for train_sample in train_dataset.data:
-    print(train_sample)
-    #print("\nfeatures:\n", train_sample.x, "\nedges:\n", train_sample.edge_index)
-print("=" * 60)
-
-print("+" * 60)
-print("test_dataset")
-print("num_classes:", test_dataset.num_classes)
-print("num_features", test_dataset.data.num_features)
-print("contains_isolated_nodes:", test_dataset.data.contains_isolated_nodes())
-print("contains_self_loops:", test_dataset.data.contains_self_loops())
-print("is_coalesced:", test_dataset.data.is_coalesced())
-print("is_undirected:", test_dataset.data.is_undirected())
-
-
-print("size:", test_dataset.data.x.size(), "x.size(0):", test_dataset.data.x.size(0))
-for test_sample in test_dataset.data:
-    print(test_sample)
-print("+" * 60)
-
-print("@" * 50)
-print("train_dataset")
-print("num_classes:", train_dataset.num_classes)
-print("num_features", train_dataset.data.num_features)
-for key, val in train_dataset.data:
-    print(key)
-    print(val.size())
-print("@" * 50)
-
-print("=" * 60)
-print("test_dataset")
-print("num_classes:", test_dataset.num_classes)
-print("num_features", test_dataset.data.num_features)
-for key, val in test_dataset.data:
-    print(key)
-    print(val.size())
-    #print("\nfeatures:\n", test_sample.x, "\nedges:\n", test_sample.edge_index)
-print("=" * 60)
-
+# Print content
+for dataset, name in zip ([train_dataset, test_dataset], ['train_dataset', 'test_dataset']):
+    print("@" * 50)
+    print(name)
+    for key, val in dataset.data:
+        print(key, val.size())
+    print("@" * 50)
 
 # Check number of classes & features of nodes in datasets 
 assert train_dataset.num_classes == test_dataset.num_classes
