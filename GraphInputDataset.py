@@ -68,10 +68,11 @@ class GraphInputDataset(InMemoryDataset):
     compute slices that will be used by the DataLoader object. 
     """
     def process(self):
+        print("Paths:")
         for split, processed_path in zip (['train', 'test'], self.processed_paths):
             node_file_path = osp.join(self.root, '{}_gcn_dataset.txt'.format(split))
             edge_file_path = osp.join(self.root, '{}_edges.txt'.format(split))
-            
+            print(node_file_path, edge_file_path)
             # Read data into huge `Data` list.
             is_data_fetched, data_list = read_dataset(node_file_path, edge_file_path)
             if is_data_fetched:
@@ -147,8 +148,10 @@ for dataset, name in zip ([train_dataset, test_dataset], ['train_dataset', 'test
     print("@" * 50)
     print(name)
     for key, val in dataset.data:
-        print(key, val.size())
+        print(key, val)
     print("@" * 50)
+    
+
 
 # Check number of classes & features of nodes in datasets 
 assert train_dataset.num_classes == test_dataset.num_classes
@@ -179,6 +182,9 @@ assert train_dataset.num_features == test_dataset.num_features
 
 class Net(torch.nn.Module):
     def __init__(self):
+        print("Network")
+        print("num_features:", train_dataset.num_features)
+        print("num_classes:", train_dataset.num_classes)
         super(Net, self).__init__()
         self.conv1 = GraphConv(train_dataset.num_features, 128)
         self.pool1 = TopKPooling(128, ratio=0.8)
