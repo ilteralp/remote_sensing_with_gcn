@@ -39,7 +39,7 @@ class GraphInputDataset(InMemoryDataset):
     def __init__(self, root, train, transform=None, pre_transform=None):
         
         super(GraphInputDataset, self).__init__(root, transform, pre_transform)
-        path = self.processed_paths[0] if train else self.processed_paths[1]
+        path = self.(process)ed_paths[0] if train else self.processed_paths[1]
         self.data, self.slices = torch.load(path)
         
         # print("*" * 50)
@@ -69,13 +69,12 @@ class GraphInputDataset(InMemoryDataset):
     compute slices that will be used by the DataLoader object. 
     """
     def process(self):
-        print("Paths:")
         for split, processed_path in zip (['train', 'test'], self.processed_paths):
             node_file_path = osp.join(self.root, '{}_gcn_dataset.txt'.format(split))
             edge_file_path = osp.join(self.root, '{}_edges.txt'.format(split))
-            print(node_file_path, edge_file_path)
             # Read data into huge `Data` list.
             is_data_fetched, data_list = read_dataset(node_file_path, edge_file_path)
+            #is_data_fetched, data = read_dataset_one_tuple(node_file_path, edge_file_path)
             if is_data_fetched:
                 if self.pre_filter is not None:
                     data_list = [data for data in data_list if self.pre_filter(data)]
@@ -85,6 +84,7 @@ class GraphInputDataset(InMemoryDataset):
                 
                 data, slices = self.collate(data_list)
                 torch.save((data, slices), processed_path)
+                #torch.save(self.collate([data]), processed_path)
             else:
                 print("Dataset cannot be read! Given", node_file_path, "and", edge_file_path)
             
@@ -154,14 +154,10 @@ def read_dataset_one_tuple(node_file_path, edge_file_path):
                         if neighbour_id != node_id:
                             source_edges.append(node_id)
                             target_edges.append(neighbour_id)
-                for name, item in zip(['xs', 'ys', 'edge_indices'], [xs, ys, [source_edges, target_edges]]):
-                    print(name)
-                    print(item)
-                print("*" * 50)
                 x = torch.from_numpy(np.array(xs)).to(torch.float)
                 y = torch.from_numpy(np.array(ys)).to(torch.long)
-                edge_indices = torch.from_numpy(np.array([source_edges, target_edges])).to(torch.long)
-                return True, Data(x=x, y=y, edge_indices=edge_indices)
+                edge_index = torch.from_numpy(np.array([source_edges, target_edges])).to(torch.long)
+                return True, Data(x=x, y=y, edge_index=edge_index)
     return False, None
 
 NODE_FILE_PATH = ROOT_PATH + 'sample_gcn_dataset.txt'
