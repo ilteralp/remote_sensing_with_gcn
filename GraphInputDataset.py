@@ -77,10 +77,6 @@ class GraphInputDataset(InMemoryDataset):
             # Read data into huge `Data` list.
             is_data_fetched, data_list = read_dataset(node_file_path, edge_file_path)
             if is_data_fetched:
-                # print("data_list len:", len(data_list))
-                # for data in data_list:
-                #     print("x:", data.x, "y:", data.y, "edge_index:", data.edge_index)
-                
                 if self.pre_filter is not None:
                     data_list = [data for data in data_list if self.pre_filter(data)]
         
@@ -172,11 +168,6 @@ NODE_FILE_PATH = ROOT_PATH + 'sample_gcn_dataset.txt'
 EDGE_FILE_PATH = ROOT_PATH + 'sample_edges.txt'
 ret_val, data = read_dataset_one_tuple(NODE_FILE_PATH, EDGE_FILE_PATH)
 
-for key, val in data:
-    print(key)
-    print(val)
-
-    
 # Create dataset
 train_dataset = GraphInputDataset(ROOT_PATH, train=True)
 test_dataset = GraphInputDataset(ROOT_PATH, train=False)
