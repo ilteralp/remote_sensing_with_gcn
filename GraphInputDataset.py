@@ -8,13 +8,14 @@ Created on Fri Jan 31 10:46:25 2020
 
 import json
 import torch
-from torch_geometric.data import InMemoryDataset, Data, Batch
+from torch_geometric.data import InMemoryDataset, Data, Batch, NeighborSampler
 from torch_geometric.data import DataLoader
-from torch_geometric.nn import GraphConv, TopKPooling
+from torch_geometric.nn import GraphConv, TopKPooling, SAGEConv
 from torch_geometric.nn import global_mean_pool as gap, global_max_pool as gmp
 import torch.nn.functional as F
 import os
 import os.path as osp
+import numpy as np
 
 NUM_CLASSES = 15
 NUM_TRAIN_SAMPLES = 2832
@@ -111,7 +112,7 @@ def read_dataset(node_file_path, edge_file_path):
                 # Fetch each sample seperately
                 for sample in node_data:
                     node_id = sample['nodeId']
-                    features = torch.FloatTensor(sample['features']) # 1D, convert to 2d
+                    features = torch.FloatTensor(sample['features']) # 1D, convert to 2D
                     features = features.view(1, features.shape[0])   # Data expects [num_nodes, num_node_features]
                     label = sample['label'] - 1                      # -1 since classes start from 1
                     raw_edges = edge_data[label][str(label+1)]       # Edges include id of node being processed, so remove it. 
@@ -123,17 +124,68 @@ def read_dataset(node_file_path, edge_file_path):
                             e_to.append(neighbour_id)
                     edge_index = torch.LongTensor([e_from, e_to])
                     data = Data(x=features, y=torch.LongTensor([label]), edge_index=edge_index)
+                    print("shapes:", data.x.size(), data.y.size(), data.edge_index.size())
                     data_list.append(data)
                 return True, data_list
         return False, []
+    
+"""
+Reads given dataset from file into one tuple
+"""
+def read_dataset_one_tuple(node_file_path, edge_file_path):
+    with open(node_file_path) as node_file: # Read node file. 
+        node_data = json.load(node_file)
+        with open(edge_file_path) as edge_file: # Read edge file. 
+            edge_data = json.load(edge_file)
+            # Check number of classes
+            if len(edge_data) != NUM_CLASSES:
+                print("Classes length", len(edge_data))
+            # convert numpy arrays to tensor
+            else:
+                xs = []
+                ys = []
+                source_edges = []
+                target_edges = []
+                for sample in node_data:
+                    node_id = sample['nodeId']
+                    xs.append(sample['features'])
+                    label = sample['label'] - 1
+                    ys.append(label)
+                    raw_edges = edge_data[label][str(label+1)]
+                    e_from = []
+                    e_to = []
+                    for neighbour_id in raw_edges:
+                        if neighbour_id != node_id:
+                            source_edges.append(node_id)
+                            target_edges.append(neighbour_id)
+                for name, item in zip(['xs', 'ys', 'edge_indices'], [xs, ys, [source_edges, target_edges]]):
+                    print(name)
+                    print(item)
+                print("*" * 50)
+                x = torch.from_numpy(np.array(xs)).to(torch.float)
+                y = torch.from_numpy(np.array(ys)).to(torch.long)
+                edge_indices = torch.from_numpy(np.array([source_edges, target_edges])).to(torch.long)
+                return True, Data(x=x, y=y, edge_indices=edge_indices)
+    return False, None
+
+NODE_FILE_PATH = ROOT_PATH + 'sample_gcn_dataset.txt'
+EDGE_FILE_PATH = ROOT_PATH + 'sample_edges.txt'
+ret_val, data = read_dataset_one_tuple(NODE_FILE_PATH, EDGE_FILE_PATH)
+
+for key, val in data:
+    print(key)
+    print(val)
+
     
 # Create dataset
 train_dataset = GraphInputDataset(ROOT_PATH, train=True)
 test_dataset = GraphInputDataset(ROOT_PATH, train=False)
 
+
 for dataset, name in zip ([train_dataset, test_dataset], ['train_dataset', 'test_dataset']):
     print("+" * 60)
     print(name)
+    print('dataset.data type', type(dataset.data), 'content', dataset.data)
     print("size:", dataset.data.x.size(), "x.size(0):", dataset.data.x.size(0))
     print("num_classes:", dataset.num_classes)
     print("num_features:", dataset.data.num_features)
