@@ -147,8 +147,6 @@ def read_dataset_one_tuple(node_file_path, edge_file_path):
                     label = sample['label'] - 1
                     ys.append(label)
                     raw_edges = edge_data[label][str(label+1)]
-                    e_from = []
-                    e_to = []
                     for neighbour_id in raw_edges:
                         if neighbour_id != node_id:
                             source_edges.append(node_id)
