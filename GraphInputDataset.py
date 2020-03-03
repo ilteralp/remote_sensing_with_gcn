@@ -39,7 +39,7 @@ class GraphInputDataset(InMemoryDataset):
     def __init__(self, root, train, transform=None, pre_transform=None):
         
         super(GraphInputDataset, self).__init__(root, transform, pre_transform)
-        path = self.(process)ed_paths[0] if train else self.processed_paths[1]
+        path = self.processed_paths[0] if train else self.processed_paths[1]
         self.data, self.slices = torch.load(path)
         
         # print("*" * 50)
@@ -73,18 +73,18 @@ class GraphInputDataset(InMemoryDataset):
             node_file_path = osp.join(self.root, '{}_gcn_dataset.txt'.format(split))
             edge_file_path = osp.join(self.root, '{}_edges.txt'.format(split))
             # Read data into huge `Data` list.
-            is_data_fetched, data_list = read_dataset(node_file_path, edge_file_path)
-            #is_data_fetched, data = read_dataset_one_tuple(node_file_path, edge_file_path)
+            #is_data_fetched, data_list = read_dataset(node_file_path, edge_file_path)
+            is_data_fetched, data = read_dataset_one_tuple(node_file_path, edge_file_path)
             if is_data_fetched:
-                if self.pre_filter is not None:
-                    data_list = [data for data in data_list if self.pre_filter(data)]
+                # if self.pre_filter is not None:
+                #     data_list = [data for data in data_list if self.pre_filter(data)]
         
-                if self.pre_transform is not None:
-                    data_list = [self.pre_transform(data) for data in data_list]
+                # if self.pre_transform is not None:
+                #     data_list = [self.pre_transform(data) for data in data_list]
                 
-                data, slices = self.collate(data_list)
-                torch.save((data, slices), processed_path)
-                #torch.save(self.collate([data]), processed_path)
+                # data, slices = self.collate(data_list)
+                # torch.save((data, slices), processed_path)
+                torch.save(self.collate([data]), processed_path)
             else:
                 print("Dataset cannot be read! Given", node_file_path, "and", edge_file_path)
             
@@ -136,7 +136,6 @@ def read_dataset_one_tuple(node_file_path, edge_file_path):
             # Check number of classes
             if len(edge_data) != NUM_CLASSES:
                 print("Classes length", len(edge_data))
-            # convert numpy arrays to tensor
             else:
                 xs = []
                 ys = []
@@ -270,6 +269,7 @@ def train(epoch):
         optimizer.zero_grad()
         output = model(data)
         print('output.size', output.size(), 'target.size', data.y.size())
+        print('output', output, 'target', data.y)
         loss = F.nll_loss(output, data.y)
         loss.backward()
         loss_all += data.num_graphs * loss.item()
