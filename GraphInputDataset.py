@@ -22,7 +22,7 @@ import torch.nn.functional as F
 # print("Test", test_id)
 # ROOT_PATH = "/home/rog/rs/gcn/paths19/test_" + str(test_id) + "/"
 ROOT_PATH = './data'
-IS_DATA_LIST = True
+IS_DATA_LIST = False
 
 """ ======================================== Create Dataset ======================================== """
 
