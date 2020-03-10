@@ -22,7 +22,7 @@ import torch.nn.functional as F
 # print("Test", test_id)
 # ROOT_PATH = "/home/rog/rs/gcn/paths19/test_" + str(test_id) + "/"
 ROOT_PATH = './data'
-IS_DATA_LIST = False
+IS_DATA_LIST = True
 
 """ ======================================== Create Dataset ======================================== """
 
@@ -139,6 +139,13 @@ def read_dataset_one_tuple(node_file_path, edge_file_path):
 # Create dataset
 train_dataset = GraphInputDataset(ROOT_PATH, train=True)
 test_dataset = GraphInputDataset(ROOT_PATH, train=False)
+
+print('num train graphs:', len(train_dataset))
+print('num train graphs:', len(test_dataset))
+
+# Check there is only one graph
+assert len(train_dataset) == 1
+assert len(test_dataset) == 1
 
 # Check number of classes & features of nodes in datasets 
 assert train_dataset.num_classes == test_dataset.num_classes
