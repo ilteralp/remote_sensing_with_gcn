@@ -224,8 +224,10 @@ def train(epoch):
     model.train()
 
     loss_all = 0
+    print('train_loader')
     for data in train_loader:
         print('batch content:', data.batch)
+        print('++num_graphs', data.num_graphs)
         data = data.to(device)
         optimizer.zero_grad()
         output = model(data)
@@ -237,10 +239,12 @@ def train(epoch):
         optimizer.step()
     return loss_all / len(train_dataset)
 
+print('test_loader')
 def test(loader):
     model.eval()
     correct = 0
     for data in loader:
+        print('++num_graphs', data.num_graphs)
         data = data.to(device)
         pred = model(data).max(dim=1)[1]
         correct += pred.eq(data.y).sum().item()
