@@ -261,7 +261,9 @@ def test(dataset):
 
 for epoch in range(1, 3):
     loss = train(epoch)
-    train_acc = test(train_loader)
-    test_acc = test(test_loader)
+    # train_acc = test(train_loader)
+    # test_acc = test(test_loader)
+    train_acc = test(train_dataset)
+    test_acc = test(test_dataset)
     print('Epoch: {:03d}, Loss: {:.5f}, Train Acc: {:.5f}, Test Acc: {:.5f}'.
           format(epoch, loss, train_acc, test_acc))
