@@ -13,7 +13,7 @@ import torch
 
 from torch_geometric.data import InMemoryDataset, Data
 from torch_geometric.data import DataLoader
-from torch_geometric.nn import GraphConv, TopKPooling
+from torch_geometric.nn import GraphConv, TopKPooling, GCNConv
 from torch_geometric.nn import global_mean_pool as gap, global_max_pool as gmp
 import torch.nn.functional as F
 
@@ -159,6 +159,12 @@ assert train_dataset.num_features == test_dataset.num_features
 #         print(key, val)
 #     print("@" * 50)
 
+class Net(torch.nn.Module):
+    def __init__(self):
+        super(Net, self).__init__()
+        self.conv1 = GCNConv(train_dataset.num_node_features, 16)
+        self.conv2 = GCNConv(16, train_dataset.num_classes)
+
 """ ======================================== Build a GNN ======================================== """
 # See https://github.com/rusty1s/pytorch_geometric/blob/master/examples/enzymes_topk_pool.py
 
@@ -212,7 +218,7 @@ def train(epoch):
         print('++num_graphs', data.num_graphs)
         data = data.to(device)
         optimizer.zero_grad()
-        output = model(data)
+        output = model(data) # batch batch veriyor. 
         print('output.size', output.size(), 'target.size', data.y.size())
         print('output', output, 'target', data.y)
         loss = F.nll_loss(output, data.y)
