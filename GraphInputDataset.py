@@ -230,17 +230,25 @@ def train(epoch):
         optimizer.step()
     return loss_all / len(train_dataset)
 
-def test(loader):
-    model.eval()
-    correct = 0
-    for data in loader:
-        data = data.to(device)
-        pred = model(data).max(dim=1)[1]
-        correct += pred.eq(data.y).sum().item()
-    return correct / len(loader.dataset)
+# def test(loader):
+#     model.eval()
+#     correct = 0
+#     for data in loader:
+#         data = data.to(device)
+#         pred = model(data).max(dim=1)[1]
+#         correct += pred.eq(data.y).sum().item()
+#     return correct / len(loader.dataset)
 
-train_loader = DataLoader(train_dataset, batch_size=2)
-test_loader = DataLoader(test_dataset, batch_size=2)
+def test(dataset):
+    model.eval()
+    data = dataset[0].to(device)
+    pred = model(data).max(dim=1)[1]
+    correct = float(pred.eq(data.y).sum().item())
+    acc = correct / len(dataset[0].y)
+    return acc
+
+# train_loader = DataLoader(train_dataset, batch_size=2)
+# test_loader = DataLoader(test_dataset, batch_size=2)
 
 # for loader, name in zip([train_loader, test_loader], ['train_loader', 'test_loader']):
 #     print("+" * 100)
