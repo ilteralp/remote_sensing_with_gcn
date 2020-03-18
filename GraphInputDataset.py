@@ -164,6 +164,14 @@ class Net(torch.nn.Module):
         super(Net, self).__init__()
         self.conv1 = GCNConv(train_dataset.num_node_features, 16)
         self.conv2 = GCNConv(16, train_dataset.num_classes)
+        
+    def forward(self, data):
+        x, edge_index = data.x, data.edge_index
+        print('shape', x.shape, x.dim())
+        x = F.relu(self.conv1(x, edge_index))
+        x = F.dropout(x, training=self.training)
+        x = self.conv2(x, edge_index)
+        return F.log_softmax(x, dim=1) # dim=-1 asagidaki halinde, dim=2 old.icin fark etmez. 
 
 """ ======================================== Build a GNN ======================================== """
 # See https://github.com/rusty1s/pytorch_geometric/blob/master/examples/enzymes_topk_pool.py
@@ -212,27 +220,20 @@ def train(epoch):
     model.train()
 
     loss_all = 0
-    print('train_loader')
     for data in train_loader:
-        print('batch content:', data.batch)
-        print('++num_graphs', data.num_graphs)
         data = data.to(device)
         optimizer.zero_grad()
         output = model(data) # batch batch veriyor. 
-        print('output.size', output.size(), 'target.size', data.y.size())
-        print('output', output, 'target', data.y)
         loss = F.nll_loss(output, data.y)
         loss.backward()
         loss_all += data.num_graphs * loss.item()
         optimizer.step()
     return loss_all / len(train_dataset)
 
-print('test_loader')
 def test(loader):
     model.eval()
     correct = 0
     for data in loader:
-        print('++num_graphs', data.num_graphs)
         data = data.to(device)
         pred = model(data).max(dim=1)[1]
         correct += pred.eq(data.y).sum().item()
