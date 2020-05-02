@@ -171,7 +171,11 @@ def test():
         accs.append(acc)
     return accs
     
-    
+for epoch in range(1, 10):
+    train()
+    train_acc, test_acc = test()
+    log = 'Epoch: {:03d}, Train: {:.4f}, Test: {:.4f}'
+    print(log.format(epoch, train_acc, test_acc))
     
     
     
