@@ -52,6 +52,7 @@ class TreeInput(InMemoryDataset):
         node_path = osp.join(self.root, 'nodes.txt')
         
         data = read_tree_input_data(edge_path, node_path)  # MC#2 raw_file_names[0] vs alabilir mi ?
+        data = data if self.pre_transform is None else self.pre_transform(data)
         torch.save(self.collate([data]), self.processed_paths[0])
         
 """
@@ -64,7 +65,7 @@ def index_to_mask(index):
     return mask
 
 """
-Reads given dataset from file into one tuple
+Reads given dataset from file into one Data tuple with train and test masks.
 """
 def read_tree_input_data(edge_path, node_path):
     
@@ -76,7 +77,7 @@ def read_tree_input_data(edge_path, node_path):
     
     train_mask = index_to_mask(train_index)
     test_mask = index_to_mask(test_index)
-    return train_mask, test_mask
+    #return train_mask, test_mask
     
 
     
