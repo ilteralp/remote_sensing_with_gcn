@@ -111,7 +111,7 @@ def read_tree_input_data(class_neigh_path, level_neigh_path, node_path):
                     node_type = sample['train']
                     if node_type == TRAIN_NODE_TYPE:
                         class_node_ids = class_neigh_data[label][str(label+1)]
-                        from_nodes, to_nodes = get_neighbours(node_id, node_type, from_nodes, to_nodes)
+                        from_nodes, to_nodes = get_neighbours(node_id, class_node_ids, from_nodes, to_nodes)
                         
                 x = torch.from_numpy(np.array(xs)).to(torch.float)
                 y = torch.from_numpy(np.array(ys)).to(torch.long) 
