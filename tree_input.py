@@ -131,32 +131,32 @@ def read_tree_input_data(class_neigh_path, level_neigh_path, node_path):
                 return True, data
     return False, None
 
-# ROOT_PATH = 'C:\\Users\\melike\\code\\pytorch_geometric\\data\\'
-# CLASS_NEIGH_PATH = ROOT_PATH + 'class_neighbours.txt'
-# LEVEL_NEIGH_PATH = ROOT_PATH + 'level_neighbours.txt'
-# NODE_PATH = ROOT_PATH + 'feats.txt'
-# ret_val, data = read_tree_input_data(CLASS_NEIGH_PATH, LEVEL_NEIGH_PATH, NODE_PATH)
-# if ret_val:
-#     print('ret_val')
-#     print(ret_val)
-#     print('data')
-#     print(data)
-#     print('train_mask')
-#     print(data.train_mask)
-#     print('test_mask')
-#     print(data.test_mask)
-
+# Create dataset
 dataset = TreeInput(ROOT_PATH)
+# Check there is only one graph
+assert len(dataset) == 1
+    
+# Create network
+class Net(torch.nn.Module):
+    def __init__(self):
+        super(Net, self).__init__()
+        self.conv1 = GCNConv(dataset.num_node_features, 16)
+        self.conv2 = GCNConv(16, dataset.num_classes)
+        
+    def forward(self):
+        x, edge_index = data.x, data.edge_index
+        x = F.relu(self.conv1(x, edge_index))
+        x = F.dropout(x, training=self.training)
+        x = self.conv2(x, edge_index)
+        return F.log_softmax(x, dim=1)
 
- 
-    
-    
-    
-    
-    
-    
-    
-    
+device = torch.device('cpu')
+model, data = Net().to(device), data.to(device)
+optimizer = torch.optim.Adam(model.parameters(), lr=0.0005)
+
+
+
+
     
     
     
