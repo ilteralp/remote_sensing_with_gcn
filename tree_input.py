@@ -48,12 +48,17 @@ class TreeInput(InMemoryDataset):
     Gather data into one Data object for creating only one graph. 
     """
     def process(self):
-        edge_path = osp.join(self.root, 'edges.txt')
-        node_path = osp.join(self.root, 'nodes.txt')
-        
-        data = read_tree_input_data(edge_path, node_path)  # MC#2 raw_file_names[0] vs alabilir mi ?
-        data = data if self.pre_transform is None else self.pre_transform(data)
-        torch.save(self.collate([data]), self.processed_paths[0])
+        class_neigh_path = osp.join(self.root, 'class_neighbours.txt')
+        level_neigh_path = osp.join(self.root, 'level_neighbours.txt')
+        node_path = osp.join(self.root, 'feats.txt')
+
+        ret_val, data = read_tree_input_data(class_neigh_path, level_neigh_path, node_path)  # MC#2 raw_file_names[0] vs alabilir mi ?
+        if ret_val:
+            data = data if self.pre_transform is None else self.pre_transform(data)
+            torch.save(self.collate([data]), self.processed_paths[0])
+        else:
+            print("Could not read dataset")
+            return
         
 """
 Returns binary mask whose given indices set to true
@@ -93,7 +98,7 @@ def read_tree_input_data(class_neigh_path, level_neigh_path, node_path):
     with open(node_path) as node_file:
         node_data = json.load(node_file)
         if len(node_data) != TOTAL_SIZE:
-            print("Expected", TOTAL_SIZE, "samples, given", len(node_data))
+            print("Expected", TOTAL_SIZE, "samples, given", len(node_data), "samples!")
             return False, None
         with open(class_neigh_path) as class_neigh_file:
             class_neigh_data = json.load(class_neigh_file)
@@ -126,23 +131,24 @@ def read_tree_input_data(class_neigh_path, level_neigh_path, node_path):
                 return True, data
     return False, None
 
-ROOT_PATH = 'C:\\Users\\melike\\code\\pytorch_geometric\\data\\'
-CLASS_NEIGH_PATH = ROOT_PATH + 'class_neighbours.txt'
-LEVEL_NEIGH_PATH = ROOT_PATH + 'level_neighbours.txt'
-NODE_PATH = ROOT_PATH + 'feats.txt'
-ret_val, data = read_tree_input_data(CLASS_NEIGH_PATH, LEVEL_NEIGH_PATH, NODE_PATH)
-if ret_val:
-    print('ret_val')
-    print(ret_val)
-    print('data')
-    print(data)
-    print('train_mask')
-    print(data.train_mask)
-    print('test_mask')
-    print(data.test_mask)
-else:
-    print()
-    
+# ROOT_PATH = 'C:\\Users\\melike\\code\\pytorch_geometric\\data\\'
+# CLASS_NEIGH_PATH = ROOT_PATH + 'class_neighbours.txt'
+# LEVEL_NEIGH_PATH = ROOT_PATH + 'level_neighbours.txt'
+# NODE_PATH = ROOT_PATH + 'feats.txt'
+# ret_val, data = read_tree_input_data(CLASS_NEIGH_PATH, LEVEL_NEIGH_PATH, NODE_PATH)
+# if ret_val:
+#     print('ret_val')
+#     print(ret_val)
+#     print('data')
+#     print(data)
+#     print('train_mask')
+#     print(data.train_mask)
+#     print('test_mask')
+#     print(data.test_mask)
+
+dataset = TreeInput(ROOT_PATH)
+
+ 
     
     
     
