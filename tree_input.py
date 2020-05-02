@@ -92,6 +92,9 @@ def read_tree_input_data(class_neigh_path, level_neigh_path, node_path):
     # Read samples
     with open(node_path) as node_file:
         node_data = json.load(node_file)
+        if len(node_data) != TOTAL_SIZE:
+            print("Expected", TOTAL_SIZE, "samples, given", len(node_data))
+            return False, None
         with open(class_neigh_path) as class_neigh_file:
             class_neigh_data = json.load(class_neigh_file)
             with open(level_neigh_path) as level_neigh_file:
@@ -128,11 +131,17 @@ CLASS_NEIGH_PATH = ROOT_PATH + 'class_neighbours.txt'
 LEVEL_NEIGH_PATH = ROOT_PATH + 'level_neighbours.txt'
 NODE_PATH = ROOT_PATH + 'feats.txt'
 ret_val, data = read_tree_input_data(CLASS_NEIGH_PATH, LEVEL_NEIGH_PATH, NODE_PATH)
-
-print('ret_val')
-print(ret_val)
-print('data')
-print(data)
+if ret_val:
+    print('ret_val')
+    print(ret_val)
+    print('data')
+    print(data)
+    print('train_mask')
+    print(data.train_mask)
+    print('test_mask')
+    print(data.test_mask)
+else:
+    print()
     
     
     
