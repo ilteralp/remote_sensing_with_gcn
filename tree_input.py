@@ -19,8 +19,8 @@ import torch.nn.functional as F
 ROOT_PATH = './data'
 # NUM_TRAIN_SAMPLES = 2832
 # NUM_TEST_SAMPLES = 12197
-NUM_TRAIN_SAMPLES = 3
-NUM_TEST_SAMPLES = 4
+NUM_TRAIN_SAMPLES = 4
+NUM_TEST_SAMPLES = 3
 TOTAL_SIZE = NUM_TRAIN_SAMPLES + NUM_TEST_SAMPLES
 TRAIN_NODE_TYPE = 1
 
@@ -68,18 +68,17 @@ def index_to_mask(index):
 """
 For a given node, returns its neighbours in COO-format depending node type. 
 """
-def get_neighbours(node_id, node_type, neighbours):
-    source_nodes = []
-    target_nodes = []
+def get_neighbours(node_id, neighbours, source_nodes, target_nodes):
     for neigh_id in neighbours:
-        source_nodes.append(node_id)
-        target_nodes.append(neigh_id)
+        if neigh_id != node_id:
+            source_nodes.append(node_id)
+            target_nodes.append(neigh_id)
     return source_nodes, target_nodes
     
 """
 Reads given dataset from file into one Data tuple with train and test masks.
 """
-def read_tree_input_data(edge_path, node_path):
+def read_tree_input_data(class_neigh_path, level_neigh_path, node_path):
     
     # Create train and test masks
     train_index = torch.arange(NUM_TRAIN_SAMPLES, dtype=torch.long)
@@ -93,33 +92,47 @@ def read_tree_input_data(edge_path, node_path):
     # Read samples
     with open(node_path) as node_file:
         node_data = json.load(node_file)
-        with open(edge_path) as edge_file:
-            edge_data = json.load(edge_file)
-            xs = []                              # node features
-            ys = []                              # node labels
-            source_edges = []                    # COO format, from-to
-            target_edges = []
-            for sample in node_data:
-                node_id = sample['nodeId']
-                xs.append(sample['features'])
-                label = sample['label'] - 1      # Labels started from 0 instead of 1
-                ys.append(label)
-                raw_edges = edge_data[label][str(label+1)]
-            
-            
-    #return train_mask, test_mask
-    
+        with open(class_neigh_path) as class_neigh_file:
+            class_neigh_data = json.load(class_neigh_file)
+            with open(level_neigh_path) as level_neigh_file:
+                level_neigh_data = json.load(level_neigh_file)
+                xs = []                                         # node features
+                ys = []                                         # node labels
+                from_nodes = []                                 # COO format, from-to
+                to_nodes = []
+                for sample in node_data:
+                    node_id = sample['nodeId']
+                    xs.append(sample['features'])
+                    label = sample['label'] - 1                 # labels started from 0 instead of 1
+                    ys.append(label)
+                    level = sample['level']
+                    level_node_ids = level_neigh_data[level][str(level)]
+                    from_nodes, to_nodes = get_neighbours(node_id, level_node_ids, from_nodes, to_nodes)
+                    node_type = sample['train']
+                    if node_type == TRAIN_NODE_TYPE:
+                        class_node_ids = class_neigh_data[label][str(label+1)]
+                        from_nodes, to_nodes = get_neighbours(node_id, node_type, from_nodes, to_nodes)
+                        
+                x = torch.from_numpy(np.array(xs)).to(torch.float)
+                y = torch.from_numpy(np.array(ys)).to(torch.long) 
+                edge_index = torch.from_numpy(np.array([from_nodes, to_nodes])).to(torch.long)
+                print(edge_index)
+                data = Data(x=x, y=y, edge_index=edge_index)
+                data.train_mask = train_mask
+                data.test_mask = test_mask
+                return True, data
+    return False, None
 
-    
 ROOT_PATH = 'C:\\Users\\melike\\code\\pytorch_geometric\\data\\'
-EDGE_PATH = ROOT_PATH + 'edges.txt'
-NODE_PATH = ROOT_PATH + 'nodes.txt'
-train_mask, test_mask = read_tree_input_data(EDGE_PATH, NODE_PATH)
+CLASS_NEIGH_PATH = ROOT_PATH + 'class_neighbours.txt'
+LEVEL_NEIGH_PATH = ROOT_PATH + 'level_neighbours.txt'
+NODE_PATH = ROOT_PATH + 'feats.txt'
+ret_val, data = read_tree_input_data(CLASS_NEIGH_PATH, LEVEL_NEIGH_PATH, NODE_PATH)
 
-print('train_mask')
-print(train_mask)
-print('test_mask')
-print(test_mask)
+print('ret_val')
+print(ret_val)
+print('data')
+print(data)
     
     
     
