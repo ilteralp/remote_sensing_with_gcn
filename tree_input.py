@@ -19,8 +19,8 @@ import torch.nn.functional as F
 ROOT_PATH = './data'
 # NUM_TRAIN_SAMPLES = 2832
 # NUM_TEST_SAMPLES = 12197
-NUM_TRAIN_SAMPLES = 2
-NUM_TEST_SAMPLES = 1
+NUM_TRAIN_SAMPLES = 3
+NUM_TEST_SAMPLES = 4
 TOTAL_SIZE = NUM_TRAIN_SAMPLES + NUM_TEST_SAMPLES
 
 
@@ -65,18 +65,54 @@ def index_to_mask(index):
     return mask
 
 """
+For a given node, returns its neighbours depending node type. 
+Return COO-format source and target nodes.
+"""
+def get_level_class_neighbours(node_id, node_type, level_neighs, class_neighs):
+    source_nodes = []
+    target_nodes = []
+    for neigh_id in level_neighs:
+        source_nodes.append(node_id)
+        target_nodes.append(neigh_id)
+        
+    if node_type == TRAIN_NODE_TYPE:
+        for neigh_id in class_neighs:
+            source_nodes.append(node_id)
+            target_nodes.append(neigh_id)
+    
+    return source_nodes, target_nodes
+
+"""
 Reads given dataset from file into one Data tuple with train and test masks.
 """
 def read_tree_input_data(edge_path, node_path):
     
+    # Create train and test masks
     train_index = torch.arange(NUM_TRAIN_SAMPLES, dtype=torch.long)
     test_index = torch.arange(NUM_TRAIN_SAMPLES, 
                               NUM_TRAIN_SAMPLES + NUM_TEST_SAMPLES,
                               dtype=torch.long)
     
-    
     train_mask = index_to_mask(train_index)
     test_mask = index_to_mask(test_index)
+    
+    # Read samples
+    with open(node_path) as node_file:
+        node_data = json.load(node_file)
+        with open(edge_path) as edge_file:
+            edge_data = json.load(edge_file)
+            xs = []                              # node features
+            ys = []                              # node labels
+            source_edges = []                    # COO format, from-to
+            target_edges = []
+            for sample in node_data:
+                node_id = sample['nodeId']
+                xs.append(sample['features'])
+                label = sample['label'] - 1      # Labels started from 0 instead of 1
+                ys.append(label)
+                raw_edges = edge_data[label][str(label+1)]
+            
+            
     #return train_mask, test_mask
     
 
