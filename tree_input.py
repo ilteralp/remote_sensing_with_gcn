@@ -22,7 +22,7 @@ ROOT_PATH = './data'
 NUM_TRAIN_SAMPLES = 3
 NUM_TEST_SAMPLES = 4
 TOTAL_SIZE = NUM_TRAIN_SAMPLES + NUM_TEST_SAMPLES
-
+TRAIN_NODE_TYPE = 1
 
 """ ======================================== Create Dataset ======================================== """
 
@@ -64,24 +64,18 @@ def index_to_mask(index):
     mask[index] = 1
     return mask
 
+
 """
-For a given node, returns its neighbours depending node type. 
-Return COO-format source and target nodes.
+For a given node, returns its neighbours in COO-format depending node type. 
 """
-def get_level_class_neighbours(node_id, node_type, level_neighs, class_neighs):
+def get_neighbours(node_id, node_type, neighbours):
     source_nodes = []
     target_nodes = []
-    for neigh_id in level_neighs:
+    for neigh_id in neighbours:
         source_nodes.append(node_id)
         target_nodes.append(neigh_id)
-        
-    if node_type == TRAIN_NODE_TYPE:
-        for neigh_id in class_neighs:
-            source_nodes.append(node_id)
-            target_nodes.append(neigh_id)
-    
     return source_nodes, target_nodes
-
+    
 """
 Reads given dataset from file into one Data tuple with train and test masks.
 """
