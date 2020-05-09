@@ -11,9 +11,8 @@ import json
 import torch
 
 from torch_geometric.data import InMemoryDataset, Data
-from torch_geometric.data import DataLoader
-from torch_geometric.nn import GraphConv, TopKPooling, GCNConv
-from torch_geometric.nn import global_mean_pool as gap, global_max_pool as gmp
+from torch_geometric.nn import GCNConv
+from torch_sparse import coalesce
 import torch.nn.functional as F
 
 ROOT_PATH = './data'
@@ -23,8 +22,8 @@ NUM_TRAIN_SAMPLES = 4
 NUM_TEST_SAMPLES = 3
 TOTAL_SIZE = NUM_TRAIN_SAMPLES + NUM_TEST_SAMPLES
 TRAIN_NODE_TYPE = 1
-
-""" ======================================== Create Dataset ======================================== """
+NUM_BANDS = 3
+NUM_LEVELS = 7
 
 class TreeInput(InMemoryDataset):
     def __init__(self, root, transform=None, pre_transform=None):
@@ -34,7 +33,7 @@ class TreeInput(InMemoryDataset):
     # The name of the files to find in the self.raw_dir folder in order to skip the download.
     @property
     def raw_file_names(self):
-        return [osp.join(self.root, file_name) for file_name in ['edges.txt', 'nodes.txt']] # MC#1
+        return [osp.join(self.root, file_name) for file_name in ['class_neighbours.txt', 'ex1_feats.txt', 'ex1_level_neighbours_multi_bands.txt']]
     
     # A list of files in the processed_dir which needs to be found in order to skip the processing.
     @property
@@ -49,11 +48,13 @@ class TreeInput(InMemoryDataset):
     """
     def process(self):
         class_neigh_path = osp.join(self.root, 'class_neighbours.txt')
-        level_neigh_path = osp.join(self.root, 'level_neighbours.txt')
-        node_path = osp.join(self.root, 'feats.txt')
+        #level_neigh_path = osp.join(self.root, 'level_neighbours.txt')
+        level_neigh_path = osp.join(self.root, 'ex1_level_neighbours_multi_bands.txt')
+        node_path = osp.join(self.root, 'ex1_feats.txt')
 
-        ret_val, data = read_tree_input_data(class_neigh_path, level_neigh_path, node_path)  # MC#2 raw_file_names[0] vs alabilir mi ?
+        ret_val, data = read_tree_input_data(class_neigh_path, level_neigh_path, node_path)
         if ret_val:
+            print(data)
             data = data if self.pre_transform is None else self.pre_transform(data)
             torch.save(self.collate([data]), self.processed_paths[0])
         else:
@@ -74,10 +75,17 @@ def index_to_mask(index):
 For a given node, returns its neighbours in COO-format depending node type. 
 """
 def get_neighbours(node_id, neighbours, source_nodes, target_nodes):
-    for neigh_id in neighbours:
-        if neigh_id != node_id:
-            source_nodes.append(node_id)
-            target_nodes.append(neigh_id)
+    if isinstance(neighbours[0], list): # 2d list
+        for band_neighs in neighbours:
+            for neigh_id in band_neighs:
+                if neigh_id != node_id:    
+                    source_nodes.append(node_id)
+                    target_nodes.append(neigh_id)    
+    else:                               # 1d list
+        for neigh_id in neighbours:
+            if neigh_id != node_id:
+                source_nodes.append(node_id)
+                target_nodes.append(neigh_id)
     return source_nodes, target_nodes
     
 """
@@ -98,38 +106,59 @@ def read_tree_input_data(class_neigh_path, level_neigh_path, node_path):
     with open(node_path) as node_file:
         node_data = json.load(node_file)
         if len(node_data) != TOTAL_SIZE:
-            print("Expected", TOTAL_SIZE, "samples, given", len(node_data), "samples!")
+            print("Expected", TOTAL_SIZE, "samples, given", 
+                  len(node_data), "samples!")
             return False, None
         with open(class_neigh_path) as class_neigh_file:
             class_neigh_data = json.load(class_neigh_file)
             with open(level_neigh_path) as level_neigh_file:
                 level_neigh_data = json.load(level_neigh_file)
-                xs = []                                         # node features
-                ys = []                                         # node labels
-                from_nodes = []                                 # COO format, from-to
+                if len(level_neigh_data) != NUM_LEVELS:                              # level_neighbours.txt should have enough bands. 
+                    print('Expected', NUM_LEVELS, 'levels, given', 
+                          len(level_neigh_data), 'levels!')
+                    return False, []
+                xs = []                                                              # node features
+                ys = []                                                              # node labels
+                from_nodes = []                                                      # COO format, from-to relation
                 to_nodes = []
                 for sample in node_data:
                     node_id = sample['nodeId']
                     xs.append(sample['features'])
-                    label = sample['label'] - 1                 # labels started from 0 instead of 1
+                    label = sample['label'] - 1                                     # labels started from 0 instead of 1
                     ys.append(label)
-                    level = sample['level']
-                    level_node_ids = level_neigh_data[level][str(level)]
-                    from_nodes, to_nodes = get_neighbours(node_id, level_node_ids, from_nodes, to_nodes)
+                    levels = sample['level']                                        # nodes of the same level of the same band are neighbours.
+                    if len(levels) != NUM_BANDS:                                    # feats.txt should have enough bands
+                        print("Expected", NUM_BANDS, "bands, given", 
+                              num_bands, "bands in", node_path)
+                        return False, []
+                    for band_id, level in enumerate(levels):                        # nodes of the same level of the same band are neighbours.
+                        levels_multi_bands = level_neigh_data[level][str(level)]
+                        num_bands = len(levels_multi_bands)
+                        if num_bands != len(levels):                                # level_neighbours.txt should have the same number of bands with feats.txt
+                            print("Different number of bands in", node_path, "and",
+                                  level_neigh_path, len(levels), "vs", num_bands)
+                            return False, []
+                        level_node_ids = levels_multi_bands[band_id]
+                        from_nodes, to_nodes = get_neighbours(node_id, level_node_ids, 
+                                                              from_nodes, to_nodes)
                     node_type = sample['train']
-                    if node_type == TRAIN_NODE_TYPE:
+                    if node_type == TRAIN_NODE_TYPE:                                # nodes of the same class are neighbours (only for training set)
                         class_node_ids = class_neigh_data[label][str(label+1)]
-                        from_nodes, to_nodes = get_neighbours(node_id, class_node_ids, from_nodes, to_nodes)
+                        from_nodes, to_nodes = get_neighbours(node_id, class_node_ids, 
+                                                              from_nodes, to_nodes)
                         
                 x = torch.from_numpy(np.array(xs)).to(torch.float)
                 y = torch.from_numpy(np.array(ys)).to(torch.long) 
                 edge_index = torch.from_numpy(np.array([from_nodes, to_nodes])).to(torch.long)
-                print(edge_index)
-                data = Data(x=x, y=y, edge_index=edge_index)
+                edge_index, _ = coalesce(edge_index, None, x.size(0), x.size(0))
+
+                data = Data(x=x, y=y, edge_index=edge_index)                        # create only one Data object
                 data.train_mask = train_mask
                 data.test_mask = test_mask
                 return True, data
     return False, None
+
+
 
 # Create dataset
 dataset = TreeInput(ROOT_PATH)
