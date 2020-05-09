@@ -15,15 +15,16 @@ from torch_geometric.nn import GCNConv
 from torch_sparse import coalesce
 import torch.nn.functional as F
 
-ROOT_PATH = './data'
+ROOT_PATH = "C:\\Users\\melike\\RS\\gcn\\paths19\\test_148"
+#ROOT_PATH = './data'
 # NUM_TRAIN_SAMPLES = 2832
 # NUM_TEST_SAMPLES = 12197
-NUM_TRAIN_SAMPLES = 4
-NUM_TEST_SAMPLES = 3
+NUM_TRAIN_SAMPLES = 2832
+NUM_TEST_SAMPLES = 12197
 TOTAL_SIZE = NUM_TRAIN_SAMPLES + NUM_TEST_SAMPLES
 TRAIN_NODE_TYPE = 1
-NUM_BANDS = 3
-NUM_LEVELS = 7
+NUM_BANDS = 2
+NUM_LEVELS = 256
 
 class TreeInput(InMemoryDataset):
     def __init__(self, root, transform=None, pre_transform=None):
@@ -33,7 +34,7 @@ class TreeInput(InMemoryDataset):
     # The name of the files to find in the self.raw_dir folder in order to skip the download.
     @property
     def raw_file_names(self):
-        return [osp.join(self.root, file_name) for file_name in ['class_neighbours.txt', 'ex1_feats.txt', 'ex1_level_neighbours_multi_bands.txt']]
+        return [osp.join(self.root, file_name) for file_name in ['class_neighbours.txt', 'feats.txt', 'level_neighbours.txt']]
     
     # A list of files in the processed_dir which needs to be found in order to skip the processing.
     @property
@@ -49,8 +50,8 @@ class TreeInput(InMemoryDataset):
     def process(self):
         class_neigh_path = osp.join(self.root, 'class_neighbours.txt')
         #level_neigh_path = osp.join(self.root, 'level_neighbours.txt')
-        level_neigh_path = osp.join(self.root, 'ex1_level_neighbours_multi_bands.txt')
-        node_path = osp.join(self.root, 'ex1_feats.txt')
+        level_neigh_path = osp.join(self.root, 'level_neighbours.txt')
+        node_path = osp.join(self.root, 'feats.txt')
 
         ret_val, data = read_tree_input_data(class_neigh_path, level_neigh_path, node_path)
         if ret_val:
