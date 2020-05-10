@@ -1,4 +1,0 @@
-[{"nodeId":0, "label":14, "features": [76, 21]},
-{"nodeId":10, "label":14, "features": [9, 26]},
-{"nodeId":2, "label":1, "features": [21, 16]},
-{"nodeId":4, "label":1, "features": [23, 61]}]
