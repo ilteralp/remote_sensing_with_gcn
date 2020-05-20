@@ -15,8 +15,8 @@ from torch_geometric.nn import GCNConv
 from torch_sparse import coalesce
 import torch.nn.functional as F
 
-ROOT_PATH = "C:\\Users\\melike\\RS\\gcn\\paths19\\test_148"
-#ROOT_PATH = './data'
+#ROOT_PATH = "C:\\Users\\melike\\RS\\gcn\\paths19\\test_148"
+ROOT_PATH = './data'
 # NUM_TRAIN_SAMPLES = 2832
 # NUM_TEST_SAMPLES = 12197
 NUM_TRAIN_SAMPLES = 2832
@@ -130,7 +130,7 @@ def read_tree_input_data(class_neigh_path, level_neigh_path, node_path):
                     levels = sample['level']                                        # nodes of the same level of the same band are neighbours.
                     if len(levels) != NUM_BANDS:                                    # feats.txt should have enough bands
                         print("Expected", NUM_BANDS, "bands, given", 
-                              num_bands, "bands in", node_path)
+                              len(levels), "bands in", node_path)
                         return False, []
                     for band_id, level in enumerate(levels):                        # nodes of the same level of the same band are neighbours.
                         levels_multi_bands = level_neigh_data[level][str(level)]
@@ -163,6 +163,11 @@ def read_tree_input_data(class_neigh_path, level_neigh_path, node_path):
 
 # Create dataset
 dataset = TreeInput(ROOT_PATH)
+data = dataset[0]
+print('num_nodes', data.num_nodes, 'num_classes', dataset.num_classes, 'dataset_len', len(dataset))
+print('contains_self_loops', data.contains_self_loops())
+print('contains_isolated_nodes', data.contains_isolated_nodes())
+
 # Check there is only one graph
 assert len(dataset) == 1
     
