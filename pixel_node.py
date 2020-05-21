@@ -11,20 +11,24 @@ import random
 import os
 import json
 import torch
+import argparse
 
 #torch.manual_seed(42)
+
+parser = argparse.ArgumentParser()
+parser.add_argument('--use_gdc', action='store_true',
+                    help='Use GDC preprocessing.')
+args = parser.parse_args()
+
 
 from torch_geometric.data import InMemoryDataset, Data
 from torch_geometric.nn import GCNConv
 from torch_sparse import coalesce
 import torch.nn.functional as F
+import Constants
 
 TRAIN_NODE = 1
 TEST_NODE = 2
-#ROOT_PATH = "C:\\Users\\melike\\RS\\gcn\\paths19\\test_149"
-ROOT_PATH = "/home/rog/rs/gcn/paths19/test_149"
-NODE_FILE_NAME = 'pixel_as_node.txt'
-#ROOT_PATH = './data'
 
 class PixelNode(InMemoryDataset):
     def __init__(self, root, transform=None, pre_transform=None):
@@ -34,7 +38,7 @@ class PixelNode(InMemoryDataset):
     # The name of the files to find in the self.raw_dir folder in order to skip the download.
     @property
     def raw_file_names(self):
-        return osp.join(self.root, NODE_FILE_NAME)
+        return osp.join(self.root, Constants.NODE_FILE_NAME)
     
     # A list of files in the processed_dir which needs to be found in order to skip the processing.
     @property
@@ -48,7 +52,7 @@ class PixelNode(InMemoryDataset):
     Gather data into one Data object for creating only one graph. 
     """
     def process(self):
-        node_file_path = osp.join(self.root, NODE_FILE_NAME)
+        node_file_path = osp.join(self.root, Constants.NODE_FILE_NAME)
         ret_val, data = read_pixel_node_data(node_file_path)
         if ret_val:
             print(data)
@@ -121,7 +125,7 @@ def read_pixel_node_data(node_file_path):
 
 #seed_everything()
 
-dataset = PixelNode(ROOT_PATH)
+dataset = PixelNode(Constants.ROOT_PATH)
 data = dataset[0]
 print('num_nodes', data.num_nodes, 'num_classes', dataset.num_classes, 'dataset_len', len(dataset))
 print('contains_self_loops', data.contains_self_loops())
@@ -130,12 +134,25 @@ print('contains_isolated_nodes', data.contains_isolated_nodes())
 # Check there is only one graph
 assert len(dataset) == 1
 
+if args.use_gdc:
+    gdc = T.GDC(self_loop_weight=1, normalization_in='sym',
+                normalization_out='col',
+                diffusion_kwargs=dict(method='ppr', alpha=0.05),
+                sparsification_kwargs=dict(method='topk', k=128,
+                                           dim=0), exact=True)
+    data = gdc(data)
+
 # Create network
 class Net(torch.nn.Module):
     def __init__(self):
         super(Net, self).__init__()
-        self.conv1 = GCNConv(dataset.num_node_features, 16)
-        self.conv2 = GCNConv(16, dataset.num_classes)
+        self.conv1 = GCNConv(dataset.num_features, 16, cached=True,
+                             normalize=not args.use_gdc)
+        self.conv2 = GCNConv(16, dataset.num_classes, cached=True,
+                             normalize=not args.use_gdc)
+        
+        self.reg_params = self.conv1.parameters()
+        self.non_reg_params = self.conv2.parameters()
         
     def forward(self):
         x, edge_index = data.x, data.edge_index
@@ -147,7 +164,10 @@ class Net(torch.nn.Module):
 device = torch.device('cuda' if torch.cuda.is_available() else 'cpu')
 data = dataset[0]
 model, data = Net().to(device), data.to(device)
-optimizer = torch.optim.Adam(model.parameters(), lr=0.0005)
+optimizer = torch.optim.Adam([
+    dict(params=model.reg_params, weight_decay=5e-4),
+    dict(params=model.non_reg_params, weight_decay=0)
+], lr=0.01)
           
 def train():
     model.train()
@@ -165,7 +185,7 @@ def test():
         accs.append(acc)
     return accs
     
-for epoch in range(1, 25):
+for epoch in range(1, 100):
     train()
     train_acc, test_acc = test()
     log = 'Epoch: {:03d}, Train: {:.4f}, Test: {:.4f}'
