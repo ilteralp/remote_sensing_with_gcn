@@ -7,8 +7,12 @@ Created on Thu May 21 01:51:30 2020
 
 import os.path as osp
 import numpy as np
+import random
+import os
 import json
 import torch
+
+#torch.manual_seed(42)
 
 from torch_geometric.data import InMemoryDataset, Data
 from torch_geometric.nn import GCNConv
@@ -53,6 +57,15 @@ class PixelNode(InMemoryDataset):
             print("Could not read dataset")
             return
         
+def seed_everything(seed=1234):                                                  
+	random.seed(seed)                                                            
+	torch.manual_seed(seed)                                                      
+	torch.cuda.manual_seed_all(seed)                                             
+	np.random.seed(seed)                                                         
+	os.environ['PYTHONHASHSEED'] = str(seed)                                     
+	torch.backends.cudnn.deterministic = True                                    
+	torch.backends.cudnn.benchmark = False 
+        
 """
 Reads pixel-nodes from its file where 
 some of the nodes are not labeled. 
@@ -70,7 +83,7 @@ def read_pixel_node_data(node_file_path):
         test_mask = torch.zeros((len(node_data), ), dtype=torch.bool)
         for sample in node_data:
             xs.append(sample['fs'])
-            ys.append(sample['label'])   # labels [1,15], start them from 0.
+            ys.append(sample['label'] - 1)   # labels [1,15], start them from 0.
             node_id = sample['id']
             node_ids.append(node_id)
             node_type = sample['type']
@@ -104,6 +117,8 @@ def read_pixel_node_data(node_file_path):
 #         print(val)
 # else:
 #     print('could not read!')
+
+#seed_everything()
 
 dataset = PixelNode(ROOT_PATH)
 data = dataset[0]
