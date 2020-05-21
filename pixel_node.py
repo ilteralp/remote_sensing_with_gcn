@@ -21,8 +21,9 @@ import torch.nn.functional as F
 
 TRAIN_NODE = 1
 TEST_NODE = 2
-ROOT_PATH = "C:\\Users\\melike\\RS\\gcn\\paths19\\test_149"
-NODE_FILE_NAME = '68k_pixel_as_node.txt'
+#ROOT_PATH = "C:\\Users\\melike\\RS\\gcn\\paths19\\test_149"
+ROOT_PATH = "/home/rog/rs/gcn/paths19/test_149"
+NODE_FILE_NAME = 'pixel_as_node.txt'
 #ROOT_PATH = './data'
 
 class PixelNode(InMemoryDataset):
