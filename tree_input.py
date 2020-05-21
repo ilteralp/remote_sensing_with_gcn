@@ -76,17 +76,10 @@ def index_to_mask(index):
 For a given node, returns its neighbours in COO-format depending node type. 
 """
 def get_neighbours(node_id, neighbours, source_nodes, target_nodes):
-    if isinstance(neighbours[0], list): # 2d list
-        for band_neighs in neighbours:
-            for neigh_id in band_neighs:
-                if neigh_id != node_id:    
-                    source_nodes.append(node_id)
-                    target_nodes.append(neigh_id)    
-    else:                               # 1d list
-        for neigh_id in neighbours:
-            if neigh_id != node_id:
-                source_nodes.append(node_id)
-                target_nodes.append(neigh_id)
+    for neigh_id in neighbours:
+        if neigh_id != node_id:
+            source_nodes.append(node_id)
+            target_nodes.append(neigh_id)
     return source_nodes, target_nodes
     
 """
