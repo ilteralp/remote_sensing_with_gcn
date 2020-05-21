@@ -144,7 +144,7 @@ class Net(torch.nn.Module):
         x = self.conv2(x, edge_index)
         return F.log_softmax(x, dim=1)
     
-device = torch.device('cpu')
+device = torch.device('cuda' if torch.cuda.is_available() else 'cpu')
 data = dataset[0]
 model, data = Net().to(device), data.to(device)
 optimizer = torch.optim.Adam(model.parameters(), lr=0.0005)
