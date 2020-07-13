@@ -24,8 +24,11 @@ BASE_PATH = "/home/rog/rs"
 
 ROOT_PATH = os.path.join(BASE_PATH, 'gcn', 'paths19', 'test_149')
 VAI_PATH = os.path.join(BASE_PATH, 'vaihingen')
-ALPHA_NODE_FEATS_PATH = os.path.join(VAI_PATH, 'alpha_feats_no_adj.txt')
-ALPHA_EDGES_PATH = os.path.join(VAI_PATH, 'alpha_cliques.txt')
+ALPHA_NOT_ADJ_NODE_FEATS_PATH = os.path.join(VAI_PATH, 'alpha_feats_no_adj.txt')
+ALPHA_CLIQUE_EDGES_PATH = os.path.join(VAI_PATH, 'alpha_cliques.txt')
 ALPHA_ROOT_PATH = os.path.join(VAI_PATH, '_pyg')
+
+ALPHA_ADJ_NODE_FEATS_PATH = os.path.join(VAI_PATH, 'alpha_feats_adj.txt')
+ALPHA_SPATIAL_ADJ_EDGES_PATH = os.path.join(VAI_PATH, 'alpha_spatial_adj.txt')
 
 
