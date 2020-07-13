@@ -47,8 +47,8 @@ class AlphaNode(InMemoryDataset):
     Gather data into one Data object for creating only one graph. 
     """
     def process(self):
-        node_file_path = osp.join(self.root, Constants.ALPHA_NODE_FEATS_PATH)
-        edge_file_path = osp.join(self.root, Constants.ALPHA_EDGES_PATH)
+        node_file_path = osp.join(self.root, Constants.ALPHA_ADJ_NODE_FEATS_PATH)
+        edge_file_path = osp.join(self.root, Constants.ALPHA_SPATIAL_ADJ_EDGES_PATH)
         
         ret_val, data, map_ids = read_alpha_node_data(node_file_path, edge_file_path)
         if ret_val:
@@ -95,8 +95,9 @@ def read_alpha_node_data(node_file_path, edge_file_path):
                 ys.append(sample['label'])
                 node_id = sample['id']
                 node_ids.append(node_id)
-                parent_id = sample['parent']
-                ns = edge_data[str(parent_id)]
+                # parent_id = sample['parent']
+                # ns = edge_data[str(parent_id)]
+                ns = edge_data[str(node_id)]
                 if node_id not in map_ids:       # Map node_ids to [0, len) range
                     map_ids[node_id] = map_index
                     map_index += 1
@@ -104,10 +105,15 @@ def read_alpha_node_data(node_file_path, edge_file_path):
                     if n not in map_ids:         # Map neighbour ids to [0, len) range
                         map_ids[n] = map_index
                         map_index += 1
-                    if n != node_id:
-                        from_nodes.append(map_ids[node_id])
-                        to_nodes.append(map_ids[n])
-                    
+                    from_nodes.append(map_ids[node_id])
+                    to_nodes.append(map_ids[n])
+                    # if n != node_id:           # Clique adjacency
+                    #     from_nodes.append(map_ids[node_id])
+                    #     to_nodes.append(map_ids[n])
+            
+            # for key, val in map_ids.items():
+            #     print(key, 'became', val)
+            
             x = torch.from_numpy(np.array(xs)).to(torch.float)       
             y = torch.from_numpy(np.array(ys)).to(torch.long)
             edge_index = torch.from_numpy(np.array([from_nodes, to_nodes])).to(torch.long)
@@ -121,14 +127,14 @@ def read_alpha_node_data(node_file_path, edge_file_path):
             return True, data, map_ids
     return False, None, None
     
-# ret_val, data, map_ids = read_alpha_node_data(Constants.ALPHA_NODE_FEATS_PATH, Constants.ALPHA_EDGES_PATH)
+# ret_val, data, map_ids = read_alpha_node_data(Constants.ALPHA_ADJ_NODE_FEATS_PATH, Constants.ALPHA_SPATIAL_ADJ_EDGES_PATH)
 # print(map_ids)
 dataset = AlphaNode(Constants.ALPHA_ROOT_PATH)
 data = dataset[0]
 print('num_nodes', data.num_nodes, 'num_classes', dataset.num_classes, 'dataset_len', len(dataset))
 print('contains_self_loops', data.contains_self_loops())
 print('contains_isolated_nodes', data.contains_isolated_nodes())
-    
+
 # Check there is only one graph
 assert len(dataset) == 1
 
