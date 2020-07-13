@@ -12,6 +12,7 @@ import os
 import json
 import torch
 import argparse
+import random
 
 parser = argparse.ArgumentParser()
 parser.add_argument('--use_gdc', action='store_true',
@@ -74,11 +75,19 @@ def read_alpha_node_data(node_file_path, edge_file_path):
             from_nodes = []                      # COO format, from-to relation
             to_nodes = []
             #edge_weights = []
-            train_end = int(len(node_data) * Constants.ALPHA_TRAIN_PERCENT)
-            train_index = torch.arange(train_end, dtype=torch.long)
-            test_index = torch.arange(train_end, len(node_data), dtype=torch.long)
-            train_mask = index_to_mask(train_index, len(node_data))
-            test_mask = index_to_mask(test_index, len(node_data))
+            
+            len_data = len(node_data)
+            # train_end = int(len(node_data) * Constants.ALPHA_TRAIN_PERCENT)
+            # train_index = torch.arange(train_end, dtype=torch.long)
+            # test_index = torch.arange(train_end, len(node_data), dtype=torch.long)
+            # train_mask = index_to_mask(train_index, len(node_data))
+            # test_mask = index_to_mask(test_index, len(node_data))
+            
+            num_tr_nodes = int(len_data * Constants.ALPHA_TRAIN_PERCENT)
+            print("num train nodes:",  num_tr_nodes, "num test nodes:", len_data - num_tr_nodes, "total:", len_data)
+            train_mask = index_to_mask(random.sample(range(0, len_data-1), num_tr_nodes), len_data)
+            test_mask = ~train_mask
+            
             map_ids = {}
             map_index = 0                        # Maps java indices to [0, len) range
             for sample in node_data:
