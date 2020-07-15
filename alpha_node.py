@@ -255,7 +255,17 @@ def test():
     logits, accs = model(), []                                               # Output of the model
     for name, mask in data('train_mask', 'test_mask'):
         pred = logits[mask].max(1)[1]                                        # Returns indices of max values in each row    
-        recall, f1 = compute_scores((data.y[mask]).numpy(), pred.numpy())
+        y_test = []
+        y_pred = []
+        if device.type == 'cpu':
+            y_test = (data.y[mask]).numpy()
+            y_pred = pred.numpy()
+        elif device.type == 'cuda':
+            y_test = (data.y[mask]).cpu().numpy()
+            y_pred = pred.cpu().numpy()
+        else:
+            print('Unknown device:', device)
+        recall, f1 = compute_scores(y_test, y_pred)
         acc = pred.eq(data.y[mask]).sum().item() / mask.sum().item()         # eq() computes element-wise equality.
         # accs.append(acc)
         accs.append(f1)
