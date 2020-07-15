@@ -121,6 +121,7 @@ def read_alpha_node_data(node_file_path, edge_file_path):
             
             num_tr_nodes = int(len_data * Constants.ALPHA_TRAIN_PERCENT)
             train_ids = random.sample(range(0, len_data-1), num_tr_nodes)
+            print('train_ids', train_ids[0:10])
             train_mask = index_to_mask(train_ids, len_data)
             test_mask = ~train_mask
             print("num train nodes:",  num_tr_nodes, "num test nodes:", len_data - num_tr_nodes, "total:", len_data)
@@ -164,6 +165,18 @@ def read_alpha_node_data(node_file_path, edge_file_path):
             data.test_mask = test_mask
             return True, data, map_ids
     return False, None, None
+
+
+def seed_everything(seed=1234):                                                  
+	random.seed(seed)                                                            
+	torch.manual_seed(seed)                                                      
+	torch.cuda.manual_seed_all(seed)                                             
+	np.random.seed(seed)                                                         
+	os.environ['PYTHONHASHSEED'] = str(seed)                                     
+	torch.backends.cudnn.deterministic = True                                    
+	torch.backends.cudnn.benchmark = False 
+
+seed_everything()
 
 # ret_val, data, map_ids = read_alpha_node_data(Constants.ALPHA_ADJ_NODE_FEATS_PATH, Constants.ALPHA_SPATIAL_ADJ_EDGES_PATH)
 # print(map_ids)
