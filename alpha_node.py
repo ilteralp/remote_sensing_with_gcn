@@ -85,6 +85,7 @@ def print_train_test_info(labels, train_mask, test_mask):
     counts = dict(Counter(labels))
     for name, d in zip(['counts', 'train', 'test'], [sorted(counts.items()), get_label_percents(counts, labels, train_mask), get_label_percents(counts, labels, test_mask)]):
         print(name, '\t:', to_str(d))
+    return counts
         
 # Returns dict with float values in nicely formatted string
 def to_str(d):
@@ -121,7 +122,6 @@ def read_alpha_node_data(node_file_path, edge_file_path):
             
             num_tr_nodes = int(len_data * Constants.ALPHA_TRAIN_PERCENT)
             train_ids = random.sample(range(0, len_data-1), num_tr_nodes)
-            print('train_ids', train_ids[0:10])
             train_mask = index_to_mask(train_ids, len_data)
             test_mask = ~train_mask
             print("num train nodes:",  num_tr_nodes, "num test nodes:", len_data - num_tr_nodes, "total:", len_data)
@@ -156,13 +156,12 @@ def read_alpha_node_data(node_file_path, edge_file_path):
             y = torch.from_numpy(np.array(ys)).to(torch.long)
             edge_index = torch.from_numpy(np.array([from_nodes, to_nodes])).to(torch.long)
             # edge_attr = torch.from_numpy(np.array(edge_weights)).to(torch.float)
-            print_train_test_info(ys, train_mask, test_mask)
-            print('edge_index.max', edge_index.max())
-            print('x.size(0)', x.size(0))
+            counts = print_train_test_info(ys, train_mask, test_mask)
 
             data = Data(x=x, y=y, edge_index=edge_index)
             data.train_mask = train_mask
             data.test_mask = test_mask
+            data.num_actual_classes = len(counts)
             return True, data, map_ids
     return False, None, None
 
@@ -182,7 +181,11 @@ seed_everything()
 # print(map_ids)
 dataset = AlphaNode(Constants.ALPHA_ROOT_PATH)
 data = dataset[0]
-print('num_nodes', data.num_nodes, 'num_classes', dataset.num_classes, 'dataset_len', len(dataset))
+if data.num_actual_classes.item() != dataset.num_classes:
+    err_str = 'Number of dataset classes and actual classes are different!\n\t%d vs %d' % (dataset.num_classes, data.num_actual_classes.item())
+    raise ValueError(err_str)
+    
+print('num_nodes', data.num_nodes, 'dataset_len', len(dataset))
 print('contains_self_loops', data.contains_self_loops())
 print('contains_isolated_nodes', data.contains_isolated_nodes())
 
@@ -218,7 +221,7 @@ class Net(torch.nn.Module):
     
 device = torch.device('cuda' if torch.cuda.is_available() else 'cpu')
 data = dataset[0]
-model, data = Net().to(device), data.to(device)
+model, data = Net().to(device), data.to(device)                     # Move network and data to device (CPU)
 optimizer = torch.optim.Adam([
     dict(params=model.reg_params, weight_decay=5e-4),
     dict(params=model.non_reg_params, weight_decay=0)
@@ -227,16 +230,17 @@ optimizer = torch.optim.Adam([
 def train():
     model.train()
     optimizer.zero_grad()
-    F.nll_loss(model()[data.train_mask], data.y[data.train_mask]).backward()
+    F.nll_loss(model()[data.train_mask], data.y[data.train_mask]).backward() # y[mask] returns array of true values in mask
     optimizer.step()
 
 @torch.no_grad()
 def test():
-    model.eval()
-    logits, accs = model(), []
+    model.eval()                                                             # Sets the module in evaluation mode.
+    logits, accs = model(), []                                               # Output of the model
+    print('logits.size:', logits.size())
     for _, mask in data('train_mask', 'test_mask'):
-        pred = logits[mask].max(1)[1]
-        acc = pred.eq(data.y[mask]).sum().item() / mask.sum().item()
+        pred = logits[mask].max(1)[1]                                        # Returns indices of max values in each row    
+        acc = pred.eq(data.y[mask]).sum().item() / mask.sum().item()         # eq() computes element-wise equality.
         accs.append(acc)
     return accs
     
