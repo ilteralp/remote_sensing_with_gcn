@@ -14,6 +14,7 @@ import torch
 import argparse
 import random
 from collections import Counter
+from sklearn.metrics import confusion_matrix, balanced_accuracy_score, recall_score, f1_score, precision_score
 
 parser = argparse.ArgumentParser()
 parser.add_argument('--use_gdc', action='store_true',
@@ -166,7 +167,7 @@ def read_alpha_node_data(node_file_path, edge_file_path):
     return False, None, None
 
 
-def seed_everything(seed=1234):                                                  
+def seed_everything(seed=4242):                                                  
 	random.seed(seed)                                                            
 	torch.manual_seed(seed)                                                      
 	torch.cuda.manual_seed_all(seed)                                             
@@ -232,16 +233,29 @@ def train():
     optimizer.zero_grad()
     F.nll_loss(model()[data.train_mask], data.y[data.train_mask]).backward() # y[mask] returns array of true values in mask
     optimizer.step()
+    
+def compute_scores(y_test, y_pred):
+    # conf = confusion_matrix(y_test, y_pred)
+    # print('confusion matrix\n', conf)
+    # print('balanced_accuracy', balanced_accuracy_score(y_test, y_pred))
+    # print('precision_score', precision_score(y_test, y_pred, average="macro"))
+    # print('recall_score', recall_score(y_test, y_pred, average='macro'))
+    # print('f1_score', f1_score(y_test, y_pred, average="macro"))
+    recall = recall_score(y_test, y_pred, average='macro')
+    f1 = f1_score(y_test, y_pred, average="macro")
+    return recall, f1
+
 
 @torch.no_grad()
 def test():
     model.eval()                                                             # Sets the module in evaluation mode.
     logits, accs = model(), []                                               # Output of the model
-    print('logits.size:', logits.size())
-    for _, mask in data('train_mask', 'test_mask'):
+    for name, mask in data('train_mask', 'test_mask'):
         pred = logits[mask].max(1)[1]                                        # Returns indices of max values in each row    
+        recall, f1 = compute_scores((data.y[mask]).numpy(), pred.numpy())
         acc = pred.eq(data.y[mask]).sum().item() / mask.sum().item()         # eq() computes element-wise equality.
-        accs.append(acc)
+        # accs.append(acc)
+        accs.append(f1)
     return accs
     
 for epoch in range(1, 100):
