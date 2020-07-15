@@ -13,6 +13,7 @@ import json
 import torch
 import argparse
 import random
+from collections import Counter
 
 parser = argparse.ArgumentParser()
 parser.add_argument('--use_gdc', action='store_true',
@@ -64,6 +65,41 @@ def index_to_mask(index, size):
     mask[index] = 1
     return mask
 
+# Returns label percents in given mask with given labels
+def get_label_percents(counts, labels, mask):
+    uniq_labels = set(labels)
+    mask_counts = dict.fromkeys(uniq_labels, 0)
+    percents = {}
+    for i, val in enumerate(mask):
+        if val:
+            mask_counts[labels[i]] = mask_counts[labels[i]] + 1
+    for k in counts:
+        percents[k] = mask_counts[k] / counts[k]
+    
+    return sorted(percents.items())
+
+def print_train_test_info(labels, train_mask, test_mask):
+    if len(train_mask) != len(labels) or len(train_mask) != len(test_mask):
+        print('Different lengths, given', len(train_mask), len(labels), len(test_mask))
+        return
+    counts = dict(Counter(labels))
+    for name, d in zip(['counts', 'train', 'test'], [sorted(counts.items()), get_label_percents(counts, labels, train_mask), get_label_percents(counts, labels, test_mask)]):
+        print(name, '\t:', to_str(d))
+        
+# Returns dict with float values in nicely formatted string
+def to_str(d):
+    res = "{"
+    for pair in d:
+        res += str(pair[0]) + ": "
+        if isinstance(pair[1], int):
+            res += str(pair[1]) + '\t'
+        elif isinstance(pair[1], float):
+            res += str("%.2f" % pair[1]) + '\t'
+        else:
+            print('Undefined type in pair!<')
+    res += "}"
+    return res
+        
 def read_alpha_node_data(node_file_path, edge_file_path):
     with open(node_file_path) as node_file:
         with open(edge_file_path) as edge_file:
@@ -84,9 +120,10 @@ def read_alpha_node_data(node_file_path, edge_file_path):
             # test_mask = index_to_mask(test_index, len(node_data))
             
             num_tr_nodes = int(len_data * Constants.ALPHA_TRAIN_PERCENT)
-            print("num train nodes:",  num_tr_nodes, "num test nodes:", len_data - num_tr_nodes, "total:", len_data)
-            train_mask = index_to_mask(random.sample(range(0, len_data-1), num_tr_nodes), len_data)
+            train_ids = random.sample(range(0, len_data-1), num_tr_nodes)
+            train_mask = index_to_mask(train_ids, len_data)
             test_mask = ~train_mask
+            print("num train nodes:",  num_tr_nodes, "num test nodes:", len_data - num_tr_nodes, "total:", len_data)
             
             map_ids = {}
             map_index = 0                        # Maps java indices to [0, len) range
@@ -118,15 +155,16 @@ def read_alpha_node_data(node_file_path, edge_file_path):
             y = torch.from_numpy(np.array(ys)).to(torch.long)
             edge_index = torch.from_numpy(np.array([from_nodes, to_nodes])).to(torch.long)
             # edge_attr = torch.from_numpy(np.array(edge_weights)).to(torch.float)
+            print_train_test_info(ys, train_mask, test_mask)
             print('edge_index.max', edge_index.max())
             print('x.size(0)', x.size(0))
-            
+
             data = Data(x=x, y=y, edge_index=edge_index)
             data.train_mask = train_mask
             data.test_mask = test_mask
             return True, data, map_ids
     return False, None, None
-    
+
 # ret_val, data, map_ids = read_alpha_node_data(Constants.ALPHA_ADJ_NODE_FEATS_PATH, Constants.ALPHA_SPATIAL_ADJ_EDGES_PATH)
 # print(map_ids)
 dataset = AlphaNode(Constants.ALPHA_ROOT_PATH)
