@@ -223,10 +223,13 @@ class Net(torch.nn.Module):
 device = torch.device('cuda' if torch.cuda.is_available() else 'cpu')
 data = dataset[0]
 model, data = Net().to(device), data.to(device)                     # Move network and data to device (CPU)
+LR = 0.01
 optimizer = torch.optim.Adam([
     dict(params=model.reg_params, weight_decay=5e-4),
     dict(params=model.non_reg_params, weight_decay=0)
-], lr=0.01)
+], lr=LR)
+
+print('learning rate', LR)
           
 def train():
     model.train()
