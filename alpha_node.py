@@ -109,10 +109,24 @@ def create_masks(len_data):
     train_ids = random.sample(range(0, len_data), num_tr_nodes)
     train_mask = index_to_mask(train_ids, len_data)
     test_mask = ~train_mask
-    return train_mask, test_mask, num_tr_nodes
+    return train_mask, test_mask, num_tr_nodes, len_data-num_tr_nodes
 
-def create_semisupervised_masks():
-    pass
+def create_semisupervised_masks(len_data):
+    num_tr_nodes = 140
+    num_test_nodes = 1000
+    train_ids = random.sample(range(0, len_data), num_tr_nodes)
+    train_mask = index_to_mask(train_ids, len_data)
+    tmp_mask = ~train_mask                                      # test mask will be created using this           
+    tmp_ids = torch.arange(0, len_data)[tmp_mask]               # get tmp_ids
+    shuffled_ids = torch.randperm(len(tmp_ids))                 # shuffle tmp_ids
+    test_ids = tmp_ids[shuffled_ids[0:num_test_nodes]]          # get first num_test_nodes ids as test ids
+    test_mask = index_to_mask(test_ids, len_data)
+    return train_mask, test_mask, num_tr_nodes, num_test_nodes
+    # print('train_mask', train_mask.sum().item())
+    # print('test_mask', test_mask.sum().item())
+    # cmul = torch.add(train_mask, test_mask)
+    # print('cmul', cmul.sum().item())
+        
 
 def create_masks_for_clique_graph(node_data):
     train_end = int(len(node_data) * Constants.ALPHA_TRAIN_PERCENT)
@@ -166,7 +180,8 @@ def read_alpha_node_data(node_file_path, edge_file_path):
             #     print(key, 'became', val)
             
             len_data = len(node_data) - num_skipped
-            train_mask, test_mask, num_tr_nodes = create_masks(len_data)
+            train_mask, test_mask, num_tr_nodes, num_test_nodes = create_masks(len_data)
+            # train_mask, test_mask, num_tr_nodes, num_test_nodes = create_semisupervised_masks(len_data)
             print("num train nodes:",  num_tr_nodes, "num test nodes:", len_data - num_tr_nodes, "total:", len_data)
             
             x = torch.from_numpy(np.array(xs)).to(torch.float)       
@@ -184,13 +199,13 @@ def read_alpha_node_data(node_file_path, edge_file_path):
 
 
 def seed_everything(seed=4242):                                                  
-	random.seed(seed)                                                            
-	torch.manual_seed(seed)                                                      
-	torch.cuda.manual_seed_all(seed)                                             
-	np.random.seed(seed)                                                         
-	os.environ['PYTHONHASHSEED'] = str(seed)                                     
-	torch.backends.cudnn.deterministic = True                                    
-	torch.backends.cudnn.benchmark = False 
+ 	random.seed(seed)                                                            
+ 	torch.manual_seed(seed)                                                      
+ 	torch.cuda.manual_seed_all(seed)                                             
+ 	np.random.seed(seed)                                                         
+ 	os.environ['PYTHONHASHSEED'] = str(seed)                                     
+ 	torch.backends.cudnn.deterministic = True                                    
+ 	torch.backends.cudnn.benchmark = False 
 
 seed_everything()
 
