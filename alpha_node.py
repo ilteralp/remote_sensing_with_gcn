@@ -103,6 +103,16 @@ def to_str(d):
             print('Undefined type in pair!<')
     res += "}"
     return res
+
+def create_masks(len_data):
+    num_tr_nodes = int(len_data * Constants.ALPHA_TRAIN_PERCENT)
+    train_ids = random.sample(range(0, len_data-1), num_tr_nodes)
+    train_mask = index_to_mask(train_ids, len_data)
+    test_mask = ~train_mask
+    return train_mask, test_mask, num_tr_nodes
+
+def create_semisupervised_masks():
+    pass
         
 def read_alpha_node_data(node_file_path, edge_file_path):
     with open(node_file_path) as node_file:
@@ -154,10 +164,7 @@ def read_alpha_node_data(node_file_path, edge_file_path):
             # train_mask = index_to_mask(train_index, len(node_data))
             # test_mask = index_to_mask(test_index, len(node_data))
             
-            num_tr_nodes = int(len_data * Constants.ALPHA_TRAIN_PERCENT)
-            train_ids = random.sample(range(0, len_data-1), num_tr_nodes)
-            train_mask = index_to_mask(train_ids, len_data)
-            test_mask = ~train_mask
+            train_mask, test_mask, num_tr_nodes = create_masks(len_data)
             print("num train nodes:",  num_tr_nodes, "num test nodes:", len_data - num_tr_nodes, "total:", len_data)
             
             x = torch.from_numpy(np.array(xs)).to(torch.float)       
