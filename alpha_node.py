@@ -82,8 +82,9 @@ def get_label_percents(counts, labels, mask):
 
 def print_train_test_info(labels, train_mask, test_mask):
     if len(train_mask) != len(labels) or len(train_mask) != len(test_mask):
-        print('Different lengths, given', len(train_mask), len(labels), len(test_mask))
-        return
+        err_str = 'Different lengths, given %d vs %d vs %d' % (len(train_mask), len(labels), len(test_mask))
+        raise ValueError(err_str)
+    
     counts = dict(Counter(labels))
     for name, d in zip(['counts', 'train', 'test'], [sorted(counts.items()), get_label_percents(counts, labels, train_mask), get_label_percents(counts, labels, test_mask)]):
         print(name, '\t:', to_str(d))
@@ -115,7 +116,38 @@ def read_alpha_node_data(node_file_path, edge_file_path):
             to_nodes = []
             #edge_weights = []
             
-            len_data = len(node_data)
+            map_ids = {}
+            map_index = 0                        # Maps java indices to [0, len) range
+            num_skipped = 0
+            for sample in node_data:
+                node_id = sample['id']
+                if str(node_id) in edge_data:
+                    xs.append(sample['fs'])
+                    ys.append(sample['label'])
+                    node_ids.append(node_id)
+                    # parent_id = sample['parent']
+                    # ns = edge_data[str(parent_id)]
+                    ns = edge_data[str(node_id)]
+                    if node_id not in map_ids:       # Map node_ids to [0, len) range
+                        map_ids[node_id] = map_index
+                        map_index += 1
+                    for n in ns:
+                        if n not in map_ids:         # Map neighbour ids to [0, len) range
+                            map_ids[n] = map_index
+                            map_index += 1
+                        from_nodes.append(map_ids[node_id])
+                        to_nodes.append(map_ids[n])
+                        # if n != node_id:           # Clique adjacency
+                        #     from_nodes.append(map_ids[node_id])
+                        #     to_nodes.append(map_ids[n])
+                else:
+                    num_skipped += 1
+            print('Skipped %d nodes, using %d nodes' % (num_skipped,  len(node_data) - num_skipped))
+            
+            # for key, val in map_ids.items():
+            #     print(key, 'became', val)
+            
+            len_data = len(node_data) - num_skipped
             # train_end = int(len(node_data) * Constants.ALPHA_TRAIN_PERCENT)
             # train_index = torch.arange(train_end, dtype=torch.long)
             # test_index = torch.arange(train_end, len(node_data), dtype=torch.long)
@@ -127,32 +159,6 @@ def read_alpha_node_data(node_file_path, edge_file_path):
             train_mask = index_to_mask(train_ids, len_data)
             test_mask = ~train_mask
             print("num train nodes:",  num_tr_nodes, "num test nodes:", len_data - num_tr_nodes, "total:", len_data)
-            
-            map_ids = {}
-            map_index = 0                        # Maps java indices to [0, len) range
-            for sample in node_data:
-                xs.append(sample['fs'])
-                ys.append(sample['label'])
-                node_id = sample['id']
-                node_ids.append(node_id)
-                # parent_id = sample['parent']
-                # ns = edge_data[str(parent_id)]
-                ns = edge_data[str(node_id)]
-                if node_id not in map_ids:       # Map node_ids to [0, len) range
-                    map_ids[node_id] = map_index
-                    map_index += 1
-                for n in ns:
-                    if n not in map_ids:         # Map neighbour ids to [0, len) range
-                        map_ids[n] = map_index
-                        map_index += 1
-                    from_nodes.append(map_ids[node_id])
-                    to_nodes.append(map_ids[n])
-                    # if n != node_id:           # Clique adjacency
-                    #     from_nodes.append(map_ids[node_id])
-                    #     to_nodes.append(map_ids[n])
-            
-            # for key, val in map_ids.items():
-            #     print(key, 'became', val)
             
             x = torch.from_numpy(np.array(xs)).to(torch.float)       
             y = torch.from_numpy(np.array(ys)).to(torch.long)
@@ -236,8 +242,8 @@ print('learning rate', LR)
 def train():
     model.train()
     optimizer.zero_grad()
-    # loss = F.nll_loss(model()[data.train_mask], data.y[data.train_mask]) # y[mask] returns array of true values in mask
-    loss = F.mse_loss((model()[data.train_mask]).max(1)[1], data.y[data.train_mask])
+    loss = F.nll_loss(model()[data.train_mask], data.y[data.train_mask]) # y[mask] returns array of true values in mask
+    # loss = F.mse_loss((model()[data.train_mask]).max(1)[1], data.y[data.train_mask])
     loss.backward() 
     optimizer.step()
     return loss
@@ -249,9 +255,9 @@ def compute_scores(y_test, y_pred):
     # print('precision_score', precision_score(y_test, y_pred, average="macro"))
     # print('recall_score', recall_score(y_test, y_pred, average='macro'))
     # print('f1_score', f1_score(y_test, y_pred, average="macro"))
-    recall = recall_score(y_test, y_pred, average='macro')
+    # recall = recall_score(y_test, y_pred, average='macro')
     f1 = f1_score(y_test, y_pred, average="macro")
-    return recall, f1
+    return f1
 
 def labels_to_device(y_test, y_pred):
     if device.type == 'cpu':
@@ -271,13 +277,13 @@ def test():
     for name, mask in data('train_mask', 'test_mask'):
         pred = logits[mask].max(1)[1]                                        # Returns indices of max values in each row    
         y_test, y_pred = labels_to_device(data.y[mask], pred)
-        recall, f1 = compute_scores(y_test, y_pred)
+        f1 = compute_scores(y_test, y_pred)
         acc = pred.eq(data.y[mask]).sum().item() / mask.sum().item()         # eq() computes element-wise equality.
         # accs.append(acc)
         accs.append(f1)
     return accs
     
-for epoch in range(1, 100):
+for epoch in range(1, 200):
     loss = train()
     train_acc, test_acc = test()
     log = 'Epoch: {:03d}, Train: {:.4f}, Test: {:.4f}, Loss: {:8.4f}'
