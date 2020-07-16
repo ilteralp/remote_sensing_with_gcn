@@ -106,7 +106,7 @@ def to_str(d):
 
 def create_masks(len_data):
     num_tr_nodes = int(len_data * Constants.ALPHA_TRAIN_PERCENT)
-    train_ids = random.sample(range(0, len_data-1), num_tr_nodes)
+    train_ids = random.sample(range(0, len_data), num_tr_nodes)
     train_mask = index_to_mask(train_ids, len_data)
     test_mask = ~train_mask
     return train_mask, test_mask, num_tr_nodes
