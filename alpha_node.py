@@ -236,8 +236,8 @@ print('learning rate', LR)
 def train():
     model.train()
     optimizer.zero_grad()
-    loss = F.nll_loss(model()[data.train_mask], data.y[data.train_mask]) # y[mask] returns array of true values in mask
-    # loss = F.l1_loss(model()[data.train_mask], data.y[data.train_mask])
+    # loss = F.nll_loss(model()[data.train_mask], data.y[data.train_mask]) # y[mask] returns array of true values in mask
+    loss = F.mse_loss((model()[data.train_mask]).max(1)[1], data.y[data.train_mask])
     loss.backward() 
     optimizer.step()
     return loss
