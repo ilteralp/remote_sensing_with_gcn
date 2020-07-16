@@ -237,6 +237,7 @@ def train():
     model.train()
     optimizer.zero_grad()
     loss = F.nll_loss(model()[data.train_mask], data.y[data.train_mask]) # y[mask] returns array of true values in mask
+    # loss = F.l1_loss(model()[data.train_mask], data.y[data.train_mask])
     loss.backward() 
     optimizer.step()
     return loss
@@ -252,6 +253,16 @@ def compute_scores(y_test, y_pred):
     f1 = f1_score(y_test, y_pred, average="macro")
     return recall, f1
 
+def labels_to_device(y_test, y_pred):
+    if device.type == 'cpu':
+        y_test = y_test.numpy()
+        y_pred = y_pred.numpy()
+    elif device.type == 'cuda':
+        y_test = y_test.cpu().numpy()
+        y_pred = y_pred.cpu().numpy()
+    else:
+        print('Unknown device:', device)
+    return y_test, y_pred
 
 @torch.no_grad()
 def test():
@@ -259,16 +270,7 @@ def test():
     logits, accs = model(), []                                               # Output of the model
     for name, mask in data('train_mask', 'test_mask'):
         pred = logits[mask].max(1)[1]                                        # Returns indices of max values in each row    
-        y_test = []
-        y_pred = []
-        if device.type == 'cpu':
-            y_test = (data.y[mask]).numpy()
-            y_pred = pred.numpy()
-        elif device.type == 'cuda':
-            y_test = (data.y[mask]).cpu().numpy()
-            y_pred = pred.cpu().numpy()
-        else:
-            print('Unknown device:', device)
+        y_test, y_pred = labels_to_device(data.y[mask], pred)
         recall, f1 = compute_scores(y_test, y_pred)
         acc = pred.eq(data.y[mask]).sum().item() / mask.sum().item()         # eq() computes element-wise equality.
         # accs.append(acc)
