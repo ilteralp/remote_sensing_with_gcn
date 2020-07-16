@@ -23,6 +23,7 @@ args = parser.parse_args()
 
 from torch_geometric.data import InMemoryDataset, Data
 from torch_geometric.nn import GCNConv
+from torch.nn import Sequential, Linear
 from torch_sparse import coalesce
 import torch.nn.functional as F
 import Constants
@@ -205,6 +206,7 @@ if args.use_gdc:
 class Net(torch.nn.Module):
     def __init__(self):
         super(Net, self).__init__()
+        # self.lin = Sequential(Linear(10, 10))
         self.conv1 = GCNConv(dataset.num_features, 16, cached=True,
                               normalize=not args.use_gdc)
         self.conv2 = GCNConv(16, dataset.num_classes, cached=True,
@@ -222,7 +224,7 @@ class Net(torch.nn.Module):
     
 device = torch.device('cuda' if torch.cuda.is_available() else 'cpu')
 data = dataset[0]
-model, data = Net().to(device), data.to(device)                     # Move network and data to device (CPU)
+model, data = Net().to(device), data.to(device)                         # Move network and data to device (CPU)
 LR = 0.01
 optimizer = torch.optim.Adam([
     dict(params=model.reg_params, weight_decay=5e-4),
@@ -234,8 +236,10 @@ print('learning rate', LR)
 def train():
     model.train()
     optimizer.zero_grad()
-    F.nll_loss(model()[data.train_mask], data.y[data.train_mask]).backward() # y[mask] returns array of true values in mask
+    loss = F.nll_loss(model()[data.train_mask], data.y[data.train_mask]) # y[mask] returns array of true values in mask
+    loss.backward() 
     optimizer.step()
+    return loss
     
 def compute_scores(y_test, y_pred):
     # conf = confusion_matrix(y_test, y_pred)
@@ -272,10 +276,10 @@ def test():
     return accs
     
 for epoch in range(1, 100):
-    train()
+    loss = train()
     train_acc, test_acc = test()
-    log = 'Epoch: {:03d}, Train: {:.4f}, Test: {:.4f}'
-    print(log.format(epoch, train_acc, test_acc))      
+    log = 'Epoch: {:03d}, Train: {:.4f}, Test: {:.4f}, Loss: {:8.4f}'
+    print(log.format(epoch, train_acc, test_acc, loss))      
     
     
     
