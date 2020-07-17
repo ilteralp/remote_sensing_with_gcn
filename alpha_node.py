@@ -14,7 +14,7 @@ import torch
 import argparse
 import random
 from collections import Counter
-from sklearn.metrics import confusion_matrix, balanced_accuracy_score, recall_score, f1_score, precision_score
+from sklearn.metrics import confusion_matrix, balanced_accuracy_score, recall_score, f1_score, precision_score, cohen_kappa_score
 
 parser = argparse.ArgumentParser()
 parser.add_argument('--use_gdc', action='store_true',
@@ -109,7 +109,8 @@ def create_masks(len_data):
     train_ids = random.sample(range(0, len_data), num_tr_nodes)
     train_mask = index_to_mask(train_ids, len_data)
     test_mask = ~train_mask
-    return train_mask, test_mask, num_tr_nodes, len_data-num_tr_nodes
+    test_ids = torch.arange(0, len_data)[test_mask]
+    return train_mask, test_mask, train_ids, test_ids
 
 def create_semisupervised_masks(len_data):
     num_tr_nodes = 140
@@ -121,13 +122,12 @@ def create_semisupervised_masks(len_data):
     shuffled_ids = torch.randperm(len(tmp_ids))                 # shuffle tmp_ids
     test_ids = tmp_ids[shuffled_ids[0:num_test_nodes]]          # get first num_test_nodes ids as test ids
     test_mask = index_to_mask(test_ids, len_data)
-    return train_mask, test_mask, num_tr_nodes, num_test_nodes
+    return train_mask, test_mask, train_ids, test_ids
     # print('train_mask', train_mask.sum().item())
     # print('test_mask', test_mask.sum().item())
     # cmul = torch.add(train_mask, test_mask)
     # print('cmul', cmul.sum().item())
     
-
 """ 
 Creates header string for Weka as in Java.
 """
@@ -139,7 +139,7 @@ def get_header(num_features):
     for i in range(0, Constants.NUM_VAIHINGEN_CLASSES - 1):
         header += str(i) + ","
     header += str(Constants.NUM_VAIHINGEN_CLASSES - 1)
-    header += "}" + "\n" + "@DATA"
+    header += "}" + "\n" + "@DATA" + "\n"
     return header
 
 """ 
@@ -147,9 +147,12 @@ With using given indices on given features and labels,
 creates corresponding arff file with given filename 
 """
 def create_arff_file(ids, xs, ys, filename):
-    header = get_header(len(xs[0]))
-    
-    
+    with open(Constants.ALPHA_WEKA_FEATS_PATH + "_" + filename + ".arff", 'w') as weka_file:
+        weka_file.write(get_header(len(xs[0])))
+        for i in ids:
+            for f in xs[i]:
+                weka_file.write(str(f) + ',')        # Beware of ugly floats
+            weka_file.write(str(ys[i]) + '\n')
 
 def create_masks_for_clique_graph(node_data):
     train_end = int(len(node_data) * Constants.ALPHA_TRAIN_PERCENT)
@@ -203,9 +206,12 @@ def read_alpha_node_data(node_file_path, edge_file_path):
             #     print(key, 'became', val)
             
             len_data = len(node_data) - num_skipped
-            train_mask, test_mask, num_tr_nodes, num_test_nodes = create_masks(len_data)
-            # train_mask, test_mask, num_tr_nodes, num_test_nodes = create_semisupervised_masks(len_data)
-            print("num train nodes:",  num_tr_nodes, "num test nodes:", len_data - num_tr_nodes, "total:", len_data)
+            # train_mask, test_mask, train_ids, test_ids = create_masks(len_data)
+            train_mask, test_mask, train_ids, test_ids = create_semisupervised_masks(len_data)
+            for name, ids in zip(['train', 'test'], [train_ids, test_ids]):
+                create_arff_file(ids, xs, ys, name)
+                print('num', name, 'nodes', len(ids), 'num total nodes:', len_data)
+                print('num_%s_nodes: %d num_total_nodes: %d' % (name, len(ids), len_data))
             
             x = torch.from_numpy(np.array(xs)).to(torch.float)       
             y = torch.from_numpy(np.array(ys)).to(torch.long)
@@ -304,7 +310,8 @@ def compute_scores(y_test, y_pred):
     # print('f1_score', f1_score(y_test, y_pred, average="macro"))
     # recall = recall_score(y_test, y_pred, average='macro')
     f1 = f1_score(y_test, y_pred, average="macro")
-    return f1
+    kappa = cohen_kappa_score(y_test, y_pred)
+    return f1, kappa
 
 def labels_to_device(y_test, y_pred):
     if device.type == 'cpu':
@@ -324,10 +331,10 @@ def test():
     for name, mask in data('train_mask', 'test_mask'):
         pred = logits[mask].max(1)[1]                                        # Returns indices of max values in each row    
         y_test, y_pred = labels_to_device(data.y[mask], pred)
-        f1 = compute_scores(y_test, y_pred)
+        f1, kappa = compute_scores(y_test, y_pred)
         acc = pred.eq(data.y[mask]).sum().item() / mask.sum().item()         # eq() computes element-wise equality.
         # accs.append(acc)
-        accs.append(f1)
+        accs.append(kappa)
     return accs
     
 for epoch in range(1, 200):
