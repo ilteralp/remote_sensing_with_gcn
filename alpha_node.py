@@ -126,7 +126,30 @@ def create_semisupervised_masks(len_data):
     # print('test_mask', test_mask.sum().item())
     # cmul = torch.add(train_mask, test_mask)
     # print('cmul', cmul.sum().item())
-        
+    
+
+""" 
+Creates header string for Weka as in Java.
+"""
+def get_header(num_features):
+    header = "@RELATION vaihingen_graph" + "\n";
+    for i in range(1, num_features + 1):
+        header += "@ATTRIBUTE o" + str(i) + "	REAL" + "\n"
+    header += "@ATTRIBUTE o 	{"
+    for i in range(0, Constants.NUM_VAIHINGEN_CLASSES - 1):
+        header += str(i) + ","
+    header += str(Constants.NUM_VAIHINGEN_CLASSES - 1)
+    header += "}" + "\n" + "@DATA"
+    return header
+
+""" 
+With using given indices on given features and labels, 
+creates corresponding arff file with given filename 
+"""
+def create_arff_file(ids, xs, ys, filename):
+    header = get_header(len(xs[0]))
+    
+    
 
 def create_masks_for_clique_graph(node_data):
     train_end = int(len(node_data) * Constants.ALPHA_TRAIN_PERCENT)
