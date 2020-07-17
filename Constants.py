@@ -10,6 +10,7 @@ import os
 
 NODE_FILE_NAME = '68k_pixel_as_node.txt'
 ALPHA_TRAIN_PERCENT = 0.8
+NUM_VAIHINGEN_CLASSES = 6
 
 """ ================================ Melike ================================ """
 
@@ -30,5 +31,5 @@ ALPHA_ROOT_PATH = os.path.join(VAI_PATH, '_pyg')
 
 ALPHA_ADJ_NODE_FEATS_PATH = os.path.join(VAI_PATH, 'alpha_feats_adj.txt')
 ALPHA_SPATIAL_ADJ_EDGES_PATH = os.path.join(VAI_PATH, 'alpha_spatial_adj.txt')
-
+ALPHA_WEKA_FEATS_PATH = os.path.join(VAI_PATH, 'python_alpha_feats')
 
