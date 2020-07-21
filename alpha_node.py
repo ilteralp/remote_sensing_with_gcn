@@ -296,9 +296,9 @@ class Net(torch.nn.Module):
     def __init__(self):
         super(Net, self).__init__()
         # self.lin = Sequential(Linear(10, 10))
-        self.conv1 = GCNConv(dataset.num_features, 16, cached=True,
+        self.conv1 = GCNConv(dataset.num_features, Constants.NUM_NODES, cached=True,
                               normalize=not args.use_gdc)
-        self.conv2 = GCNConv(16, dataset.num_classes, cached=True,
+        self.conv2 = GCNConv(Constants.NUM_NODES, dataset.num_classes, cached=True,
                               normalize=not args.use_gdc)
         
         self.reg_params = self.conv1.parameters()
@@ -365,7 +365,7 @@ def test():
     return accs
     
 losses, train_accs, test_accs = [], [], []
-num_epochs = 200
+num_epochs = 400
 epoch_range = range(1, num_epochs+1)
 for epoch in epoch_range:
     loss = train()
@@ -407,6 +407,7 @@ with open(log_file_path, 'w+') as log_file:
     log_file.write('\nArchitecture:\n' + '=' * 50 + '\n')
     log_file.write('learning_rate: %.6f\n' % Constants.LR)
     log_file.write('num_epochs: %d\n' % num_epochs)
+    log_file.write('num_nodes: %d\n' % Constants.NUM_NODES)
 
     """ ==================== Accuracy & Loss ===================== """
     log_file.write('\nAccuracy & Loss:\n' + '=' * 50 + '\n')
