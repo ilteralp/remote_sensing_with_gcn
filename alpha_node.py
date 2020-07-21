@@ -371,7 +371,10 @@ for epoch in epoch_range:
     loss = train()
     train_acc, test_acc = test()
     log = 'Epoch: {:03d}, Train: {:.4f}, Test: {:.4f}, Loss: {:8.4f}'
-    print(log.format(epoch, train_acc, test_acc, loss))      
+    print(log.format(epoch, train_acc, test_acc, loss))
+    losses.append(loss)     
+    train_accs.append(train_acc)
+    test_accs.append(test_acc)
 
 with open(log_file_path, 'w+') as log_file:
     
@@ -406,7 +409,7 @@ with open(log_file_path, 'w+') as log_file:
     log_file.write('num_epochs: %d\n' % num_epochs)
 
     """ ==================== Accuracy & Loss ===================== """
-    log_file.write('Accuracy & Loss:\n' + '=' * 50 + '\n')
+    log_file.write('\nAccuracy & Loss:\n' + '=' * 50 + '\n')
     for i in range(0, num_epochs):
         log_file.write('Epoch: %03d, Train: %.4f, Test: %.4f, Loss: %8.4f\n' % (i+1, train_accs[i], test_accs[i], losses[i]))
     
