@@ -365,7 +365,7 @@ def test():
     return accs
     
 losses, train_accs, test_accs = [], [], []
-num_epochs = 10
+num_epochs = 200
 epoch_range = range(1, num_epochs+1)
 for epoch in epoch_range:
     loss = train()
@@ -414,6 +414,7 @@ with open(log_file_path, 'w+') as log_file:
         log_file.write('Epoch: %03d, Train: %.4f, Test: %.4f, Loss: %8.4f\n' % (i+1, train_accs[i], test_accs[i], losses[i]))
     
     """ ======================== Figures ========================= """
+    plt.rcParams["figure.figsize"] = (8,6)
     fig = plt.figure()
     plt.title('Loss')
     plt.xlabel('Epochs')
