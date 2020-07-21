@@ -15,6 +15,8 @@ import argparse
 import random
 from collections import Counter
 from sklearn.metrics import confusion_matrix, balanced_accuracy_score, recall_score, f1_score, precision_score, cohen_kappa_score
+import matplotlib.pyplot as plt
+
 
 parser = argparse.ArgumentParser()
 parser.add_argument('--use_gdc', action='store_true',
@@ -55,13 +57,25 @@ class AlphaNode(InMemoryDataset):
         
         ret_val, data, map_ids = read_alpha_node_data(node_file_path, edge_file_path)
         if ret_val:
-            print(data)
+            # print(data)
             data = data if self.pre_transform is None else self.pre_transform(data)
             torch.save(self.collate([data]), self.processed_paths[0])
         else:
             print("Could not read dataset")
             return
         
+"""
+Generates result folder with the next id. 
+Returns log file path. 
+"""
+def generate_result_folder():
+    P = Constants.RESULTS_PATH
+    folder_id = len([i for i in os.listdir(P) if os.path.isdir(os.path.join(P, i))]) + 1
+    folder_path = os.path.join(Constants.RESULTS_PATH, str(folder_id))
+    if not os.path.exists(folder_path):
+        os.mkdir(folder_path)
+    return os.path.join(folder_path, 'log.txt'), folder_path
+
 def index_to_mask(index, size):
     mask = torch.zeros((size, ), dtype=torch.bool)
     mask[index] = 1
@@ -78,18 +92,8 @@ def get_label_percents(counts, labels, mask):
     for k in counts:
         percents[k] = mask_counts[k] / counts[k]
     
-    return sorted(percents.items())
+    return sorted(percents.items()), sorted(mask_counts.items())
 
-def print_train_test_info(labels, train_mask, test_mask):
-    if len(train_mask) != len(labels) or len(train_mask) != len(test_mask):
-        err_str = 'Different lengths, given %d vs %d vs %d' % (len(train_mask), len(labels), len(test_mask))
-        raise ValueError(err_str)
-    
-    counts = dict(Counter(labels))
-    for name, d in zip(['counts', 'train', 'test'], [sorted(counts.items()), get_label_percents(counts, labels, train_mask), get_label_percents(counts, labels, test_mask)]):
-        print(name, '\t:', to_str(d))
-    return counts
-        
 # Returns dict with float values in nicely formatted string
 def to_str(d):
     res = "{"
@@ -104,6 +108,18 @@ def to_str(d):
     res += "}"
     return res
 
+def print_train_test_info(labels, train_mask, test_mask):
+    if len(train_mask) != len(labels) or len(train_mask) != len(test_mask):
+        err_str = 'Different lengths, given %d vs %d vs %d' % (len(train_mask), len(labels), len(test_mask))
+        raise ValueError(err_str)
+    
+    counts = dict(Counter(labels))
+    tr_percents, tr_counts = get_label_percents(counts, labels, train_mask)
+    test_percents, test_counts = get_label_percents(counts, labels, test_mask)
+    for name, d in zip(['counts', 'train', 'test'], [sorted(counts.items()), tr_percents, test_percents]): 
+        print(name, '\t:', to_str(d))
+    return counts, tr_percents, test_percents, tr_counts, test_counts
+        
 def create_masks(len_data):
     num_tr_nodes = int(len_data * Constants.ALPHA_TRAIN_PERCENT)
     train_ids = random.sample(range(0, len_data), num_tr_nodes)
@@ -206,28 +222,35 @@ def read_alpha_node_data(node_file_path, edge_file_path):
             #     print(key, 'became', val)
             
             len_data = len(node_data) - num_skipped
-            # train_mask, test_mask, train_ids, test_ids = create_masks(len_data)
-            train_mask, test_mask, train_ids, test_ids = create_semisupervised_masks(len_data)
+            train_mask, test_mask, train_ids, test_ids = create_masks(len_data)
+            # train_mask, test_mask, train_ids, test_ids = create_semisupervised_masks(len_data)
             for name, ids in zip(['train', 'test'], [train_ids, test_ids]):
                 create_arff_file(ids, xs, ys, name)
-                print('num', name, 'nodes', len(ids), 'num total nodes:', len_data)
-                print('num_%s_nodes: %d num_total_nodes: %d' % (name, len(ids), len_data))
             
             x = torch.from_numpy(np.array(xs)).to(torch.float)       
             y = torch.from_numpy(np.array(ys)).to(torch.long)
             edge_index = torch.from_numpy(np.array([from_nodes, to_nodes])).to(torch.long)
             # edge_attr = torch.from_numpy(np.array(edge_weights)).to(torch.float)
-            counts = print_train_test_info(ys, train_mask, test_mask)
-
+            counts, tr_percents, test_percents, tr_counts, test_counts = print_train_test_info(ys, train_mask, test_mask)
+            
             data = Data(x=x, y=y, edge_index=edge_index)
             data.train_mask = train_mask
             data.test_mask = test_mask
             data.num_actual_classes = len(counts)
+            data.num_tr_samples = len(train_ids)
+            data.num_test_samples = len(test_ids)
+            data.num_unlabeled_samples = len_data - (data.num_tr_samples + data.num_test_samples)
+            data.num_skipped = num_skipped
+            data.counts = counts
+            data.tr_percents = tr_percents
+            data.test_percents = test_percents
+            data.tr_counts = tr_counts
+            data.test_counts = test_counts
             return True, data, map_ids
     return False, None, None
 
 
-def seed_everything(seed=4242):                                                  
+def seed_everything(seed=Constants.SEED):                                                  
  	random.seed(seed)                                                            
  	torch.manual_seed(seed)                                                      
  	torch.cuda.manual_seed_all(seed)                                             
@@ -236,7 +259,9 @@ def seed_everything(seed=4242):
  	torch.backends.cudnn.deterministic = True                                    
  	torch.backends.cudnn.benchmark = False 
 
-seed_everything()
+
+log_file_path, folder_path = generate_result_folder()        # Generate results folder
+seed_everything()                               # Set seed
 
 # ret_val, data, map_ids = read_alpha_node_data(Constants.ALPHA_ADJ_NODE_FEATS_PATH, Constants.ALPHA_SPATIAL_ADJ_EDGES_PATH)
 # print(map_ids)
@@ -246,9 +271,14 @@ if data.num_actual_classes.item() != dataset.num_classes:
     err_str = 'Number of dataset classes and actual classes are different!\n\t%d vs %d' % (dataset.num_classes, data.num_actual_classes.item())
     raise ValueError(err_str)
     
-print('num_nodes', data.num_nodes, 'dataset_len', len(dataset))
-print('contains_self_loops', data.contains_self_loops())
-print('contains_isolated_nodes', data.contains_isolated_nodes())
+# print('num_nodes', data.num_nodes, 'dataset_len', len(dataset))
+# print('contains_self_loops', data.contains_self_loops())
+# print('contains_isolated_nodes', data.contains_isolated_nodes())
+# print('num_tr_samples', data.num_tr_samples.item())
+# print('num_test_samples', data.num_test_samples.item())
+# print('num_unlabeled_samples', data.num_unlabeled_samples.item())
+# print('tr_counts', data.tr_counts)
+# print('test_counts', data.test_counts)
 
 # Check there is only one graph
 assert len(dataset) == 1
@@ -284,14 +314,11 @@ class Net(torch.nn.Module):
 device = torch.device('cuda' if torch.cuda.is_available() else 'cpu')
 data = dataset[0]
 model, data = Net().to(device), data.to(device)                         # Move network and data to device (CPU)
-LR = 0.01
 optimizer = torch.optim.Adam([
     dict(params=model.reg_params, weight_decay=5e-4),
     dict(params=model.non_reg_params, weight_decay=0)
-], lr=LR)
+], lr=Constants.LR)
 
-print('learning rate', LR)
-          
 def train():
     model.train()
     optimizer.zero_grad()
@@ -337,21 +364,68 @@ def test():
         accs.append(kappa)
     return accs
     
-for epoch in range(1, 200):
+losses, train_accs, test_accs = [], [], []
+num_epochs = 10
+epoch_range = range(1, num_epochs+1)
+for epoch in epoch_range:
     loss = train()
     train_acc, test_acc = test()
     log = 'Epoch: {:03d}, Train: {:.4f}, Test: {:.4f}, Loss: {:8.4f}'
     print(log.format(epoch, train_acc, test_acc, loss))      
+
+with open(log_file_path, 'w+') as log_file:
     
+    """ ========================== Seed ========================== """
     
+    log_file.write('Seed: %d\n' % Constants.SEED)
     
+    """ ======================= Data/Graph ======================= """
     
+    log_file.write('\nData/Graph:\n' + '=' * 50 + '\n')
+    log_file.write('num_features: %d\n' % data.num_features)
+    log_file.write('contains_self_loops: %r\n' % data.contains_self_loops())
+    log_file.write('contains_isolated_nodes: %r\n' % data.contains_isolated_nodes())
+    log_file.write('num_samples: %d\n' % data.num_nodes)
+    log_file.write('num_train_samples: %d\n' % data.num_tr_samples)
+    log_file.write('num_test_samples: %d\n' % data.num_test_samples)
+    log_file.write('num_unlabeled_samples: %d\n' % data.num_unlabeled_samples)
+    log_file.write('num_classes: %d\n' % dataset.num_classes)
     
+    """ ========================= Counts ========================= """
     
+    log_file.write('\nCounts:\n' + '=' * 50 + '\n')
+    for name, d in zip(['counts', 'train', 'test'], [sorted(data.counts[0].items()), data.tr_counts[0], data.test_counts[0]]):
+        log_file.write(name + '\t:' + to_str(d) + '\n')
+    for name, d in zip(['train %', 'test %'], [data.tr_percents[0], data.test_percents[0]]):
+        log_file.write(name + '\t:' + to_str(d) + '\n')
     
+    """ ====================== Architecture ====================== """
     
+    log_file.write('\nArchitecture:\n' + '=' * 50 + '\n')
+    log_file.write('learning_rate: %.6f\n' % Constants.LR)
+    log_file.write('num_epochs: %d\n' % num_epochs)
+
+    """ ==================== Accuracy & Loss ===================== """
+    log_file.write('Accuracy & Loss:\n' + '=' * 50 + '\n')
+    for i in range(0, num_epochs):
+        log_file.write('Epoch: %03d, Train: %.4f, Test: %.4f, Loss: %8.4f\n' % (i+1, train_accs[i], test_accs[i], losses[i]))
     
+    """ ======================== Figures ========================= """
+    fig = plt.figure()
+    plt.title('Loss')
+    plt.xlabel('Epochs')
+    plt.ylabel('Training loss')
+    plt.plot(epoch_range, losses, 'g')
+    plt.show()
+    fig.savefig(os.path.join(folder_path, "loss.png"))
     
-    
-    
-    
+    fig = plt.figure()
+    plt.title('Accuracy')
+    plt.xlabel('Epochs')
+    plt.ylabel('Kappa')
+    plt.plot(epoch_range, train_accs, 'b-')
+    plt.plot(epoch_range, test_accs, 'r--')
+    # plt.xticks(np.arange(1, num_epochs+1, 1.0))
+    plt.legend(['Training', 'Test'])
+    plt.show();
+    fig.savefig(os.path.join(folder_path, "acc.png"))
