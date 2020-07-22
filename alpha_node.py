@@ -139,10 +139,6 @@ def create_semisupervised_masks(len_data):
     test_ids = tmp_ids[shuffled_ids[0:num_test_nodes]]          # get first num_test_nodes ids as test ids
     test_mask = index_to_mask(test_ids, len_data)
     return train_mask, test_mask, train_ids, test_ids
-    # print('train_mask', train_mask.sum().item())
-    # print('test_mask', test_mask.sum().item())
-    # cmul = torch.add(train_mask, test_mask)
-    # print('cmul', cmul.sum().item())
     
 """ 
 Creates header string for Weka as in Java.
