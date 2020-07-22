@@ -220,8 +220,8 @@ def read_alpha_node_data(node_file_path, edge_file_path):
             len_data = len(node_data) - num_skipped
             train_mask, test_mask, train_ids, test_ids = create_masks(len_data)
             # train_mask, test_mask, train_ids, test_ids = create_semisupervised_masks(len_data)
-            for name, ids in zip(['train', 'test'], [train_ids, test_ids]):
-                create_arff_file(ids, xs, ys, name)
+            # for name, ids in zip(['train', 'test'], [train_ids, test_ids]):
+            #     create_arff_file(ids, xs, ys, name)
             
             x = torch.from_numpy(np.array(xs)).to(torch.float)       
             y = torch.from_numpy(np.array(ys)).to(torch.long)
@@ -407,9 +407,9 @@ with open(log_file_path, 'w+') as log_file:
     log_file.write('num_nodes: %d\n' % Constants.NUM_NODES)
 
     """ ==================== Accuracy & Loss ===================== """
-    log_file.write('\nAccuracy & Loss:\n' + '=' * 50 + '\n')
-    for i in range(0, num_epochs):
-        log_file.write('Epoch: %03d, Train: %.4f, Test: %.4f, Loss: %8.4f\n' % (i+1, train_accs[i], test_accs[i], losses[i]))
+    # log_file.write('\nAccuracy & Loss:\n' + '=' * 50 + '\n')
+    # for i in range(0, num_epochs):
+    #     log_file.write('Epoch: %03d, Train: %.4f, Test: %.4f, Loss: %8.4f\n' % (i+1, train_accs[i], test_accs[i], losses[i]))
     
     """ ======================== Figures ========================= """
     plt.rcParams["figure.figsize"] = (8,6)
