@@ -310,7 +310,8 @@ class Net(torch.nn.Module):
         x = F.dropout(x, training=self.training)
         x = self.conv2(x, edge_index)
         return F.log_softmax(x, dim=1)
-    
+
+torch.cuda.empty_cache()                                                # For CUDA out of memory error
 device = torch.device('cuda' if torch.cuda.is_available() else 'cpu')
 data = dataset[0]
 model, data = Net().to(device), data.to(device)                         # Move network and data to device (CPU)
