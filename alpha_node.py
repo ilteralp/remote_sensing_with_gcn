@@ -189,6 +189,9 @@ def read_alpha_node_data(node_file_path, edge_file_path):
             map_ids = {}
             map_index = 0                        # Maps java indices to [0, len) range
             num_skipped = 0
+            
+            tmp_ids = [sample['id'] for sample in node_data]
+            
             for sample in node_data:
                 node_id = sample['id']
                 if str(node_id) in edge_data:
@@ -202,30 +205,35 @@ def read_alpha_node_data(node_file_path, edge_file_path):
                         map_ids[node_id] = map_index
                         map_index += 1
                     for n in ns:
-                        if n not in map_ids:         # Map neighbour ids to [0, len) range
-                            map_ids[n] = map_index
-                            map_index += 1
-                        from_nodes.append(map_ids[node_id])
-                        to_nodes.append(map_ids[n])
-                        # if n != node_id:           # Clique adjacency
-                        #     from_nodes.append(map_ids[node_id])
-                        #     to_nodes.append(map_ids[n])
+                        if n in tmp_ids:
+                            if n not in map_ids:         # Map neighbour ids to [0, len) range
+                                map_ids[n] = map_index
+                                map_index += 1
+                            from_nodes.append(map_ids[node_id])
+                            to_nodes.append(map_ids[n])
+                            # if n != node_id:           # Clique adjacency
+                            #     from_nodes.append(map_ids[node_id])
+                            #     to_nodes.append(map_ids[n])
                 else:
                     num_skipped += 1
             print('Skipped %d nodes, using %d nodes' % (num_skipped,  len(node_data) - num_skipped))
             
+            print('map_ids unique', len(np.unique(list(map_ids.keys()))), 'vs', len(map_ids))
+            print('node_data unique', len(np.unique(node_ids)), 'vs', len(node_ids))
+            
             # for key, val in map_ids.items():
             #     print(key, 'became', val)
-            
+                
             len_data = len(node_data) - num_skipped
             train_mask, test_mask, train_ids, test_ids = create_masks(len_data)
             # train_mask, test_mask, train_ids, test_ids = create_semisupervised_masks(len_data)
-            # for name, ids in zip(['train', 'test'], [train_ids, test_ids]):
-            #     create_arff_file(ids, xs, ys, name)
+            for name, ids in zip(['train', 'test'], [train_ids, test_ids]):
+                create_arff_file(ids, xs, ys, name)
             
             x = torch.from_numpy(np.array(xs)).to(torch.float)       
             y = torch.from_numpy(np.array(ys)).to(torch.long)
             edge_index = torch.from_numpy(np.array([from_nodes, to_nodes])).to(torch.long)
+            
             # edge_attr = torch.from_numpy(np.array(edge_weights)).to(torch.float)
             counts, tr_percents, test_percents, tr_counts, test_counts = print_train_test_info(ys, train_mask, test_mask)
             
@@ -309,7 +317,6 @@ class Net(torch.nn.Module):
 
 torch.cuda.empty_cache()                                                # For CUDA out of memory error
 device = torch.device('cuda' if torch.cuda.is_available() else 'cpu')
-data = dataset[0]
 model, data = Net().to(device), data.to(device)                         # Move network and data to device (CPU)
 optimizer = torch.optim.Adam([
     dict(params=model.reg_params, weight_decay=5e-4),
@@ -407,9 +414,9 @@ with open(log_file_path, 'w+') as log_file:
     log_file.write('num_nodes: %d\n' % Constants.NUM_NODES)
 
     """ ==================== Accuracy & Loss ===================== """
-    # log_file.write('\nAccuracy & Loss:\n' + '=' * 50 + '\n')
-    # for i in range(0, num_epochs):
-    #     log_file.write('Epoch: %03d, Train: %.4f, Test: %.4f, Loss: %8.4f\n' % (i+1, train_accs[i], test_accs[i], losses[i]))
+    log_file.write('\nAccuracy & Loss:\n' + '=' * 50 + '\n')
+    for i in range(0, num_epochs):
+        log_file.write('Epoch: %03d, Train: %.4f, Test: %.4f, Loss: %8.4f\n' % (i+1, train_accs[i], test_accs[i], losses[i]))
     
     """ ======================== Figures ========================= """
     plt.rcParams["figure.figsize"] = (8,6)
