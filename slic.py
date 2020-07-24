@@ -22,7 +22,7 @@ height, width, nbands = image.shape
 figsize = width / float(dpi), height / float(dpi)                    # DPI is for making output image size same with the input.
 
 # for numSegments in (100, 200):
-numSegments = 30
+numSegments = 2000
 segments = slic(image, n_segments = numSegments, sigma = 5)          # Apply SLIC & extract (appr.) given number of segments
 segment_ids = np.unique(segments)
 print('There are %d segments.' % len(segment_ids))
@@ -30,7 +30,7 @@ float_segments = segments.astype(np.single)                          # Convert t
 # int_segments = segments.astype(np.uint64)
 
 cv2.imwrite(os.path.join(Constants.SLIC_FOLDER_PATH, 
-                         'segments=%d.tif' % numSegments), segments) # Only TIF works! PNG ranges in [0,255].
+                         'segments=%d.tif' % numSegments), float_segments) # Only TIF works! PNG ranges in [0,255].
                                                                      # There might be more than 255 segments!
 
 fig = plt.figure("Superpixels -- %d segments" % (numSegments), 
