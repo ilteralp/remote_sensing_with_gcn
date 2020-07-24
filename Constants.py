@@ -37,3 +37,7 @@ ALPHA_SPATIAL_ADJ_EDGES_PATH = os.path.join(VAI_PATH, 'alpha_spatial_adj.txt')
 ALPHA_WEKA_FEATS_PATH = os.path.join(VAI_PATH, 'python_alpha_feats')
 
 RESULTS_PATH = os.path.join(VAI_PATH, 'results')
+SLIC_FOLDER_PATH = os.path.join(VAI_PATH, 'SLIC')
+IMG_PATH = os.path.join(VAI_PATH, 'image', 'png', 'top_mosaic_09cm_area1.png')
+LENNA_IMG_PATH = os.path.join(SLIC_FOLDER_PATH, 'lenna.png')
+
