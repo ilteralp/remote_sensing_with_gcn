@@ -163,7 +163,7 @@ def create_arff_file(ids, xs, ys, filename):
         weka_file.write(get_header(len(xs[0])))
         for i in ids:
             for f in xs[i]:
-                weka_file.write(str(f) + ',')        # Beware of ugly floats
+                weka_file.write(str(f) + ',')           # Beware of ugly floats
             weka_file.write(str(ys[i]) + '\n')
 
 def create_masks_for_clique_graph(node_data):
@@ -179,15 +179,15 @@ def read_alpha_node_data(node_file_path, edge_file_path):
         with open(edge_file_path) as edge_file:
             node_data = json.load(node_file)
             edge_data = json.load(edge_file)
-            xs = []                              # node features
+            xs = []                                     # node features
             ys = []
             node_ids = []
-            from_nodes = []                      # COO format, from-to relation
+            from_nodes = []                             # COO format, from-to relation
             to_nodes = []
             #edge_weights = []
             
             map_ids = {}
-            map_index = 0                        # Maps java indices to [0, len) range
+            map_index = 0                               # Maps java indices to [0, len) range
             num_skipped = 0
             
             tmp_ids = [sample['id'] for sample in node_data]
@@ -201,7 +201,7 @@ def read_alpha_node_data(node_file_path, edge_file_path):
                     # parent_id = sample['parent']
                     # ns = edge_data[str(parent_id)]
                     ns = edge_data[str(node_id)]
-                    if node_id not in map_ids:       # Map node_ids to [0, len) range
+                    if node_id not in map_ids:           # Map node_ids to [0, len) range
                         map_ids[node_id] = map_index
                         map_index += 1
                     for n in ns:
@@ -217,9 +217,7 @@ def read_alpha_node_data(node_file_path, edge_file_path):
                 else:
                     num_skipped += 1
             print('Skipped %d nodes, using %d nodes' % (num_skipped,  len(node_data) - num_skipped))
-            
-            print('map_ids unique', len(np.unique(list(map_ids.keys()))), 'vs', len(map_ids))
-            print('node_data unique', len(np.unique(node_ids)), 'vs', len(node_ids))
+            assert len(node_ids) == len(np.unique(list(map_ids.keys()))) == len(map_ids) 
             
             # for key, val in map_ids.items():
             #     print(key, 'became', val)
